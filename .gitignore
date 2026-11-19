@@ -1,0 +1,16 @@
+# private data: never commit
+dataset/
+raw_icloud/
+candidates/
+snapshots/
+attendance.db
+*.db
+embeddings.npz
+*.npz
+secrets.json
+PROMPT_*.md
+# env / cache
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
