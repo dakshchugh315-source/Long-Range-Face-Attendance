@@ -25,6 +25,7 @@ import cv2
 from flask import Flask, Response, abort, jsonify, request, send_file, send_from_directory
 
 import config
+import sessions_db
 import students_db
 from attend import LatestFrame, Voter, mark_manual, open_db, process_frame
 from face_engine import Gallery, ensure_bgr, get_app
@@ -122,6 +123,8 @@ class Engine:
                 con.close()
                 raise
         self.con = con
+        sessions_db.ensure(con, session, source, autozoom)
+        sessions_db.set_status(con, session, "live")
         self.session, self.source, self.error = session, source, None
         self.enrolled, self.present, self.jpeg = gallery.names, present, None
         self.events.clear()
@@ -283,6 +286,11 @@ class Engine:
                 reader.close()
             elif cap is not None:
                 cap.release()
+            try:
+                sessions_db.set_status(con, self.session, "done", self.error
+                                       if self.error and self.error != "Video file finished." else None)
+            except Exception:
+                pass
             con.close()
 
 
@@ -296,9 +304,13 @@ def db():
 
 
 def rows(con, session):
+    srow = sessions_db.by_name(con, session)
     con.row_factory = sqlite3.Row
-    return [dict(r) for r in con.execute(
+    out = [dict(r) for r in con.execute(
         "SELECT * FROM attendance WHERE session=? ORDER BY time", (session,))]
+    for r in out:
+        r["late"] = sessions_db.is_late(srow, r["time"])
+    return out
 
 
 def enrolled_names():
@@ -343,8 +355,10 @@ def block_cross_site():
             host = origin.split("://", 1)[-1].split("/", 1)[0]
             if host != request.host:           # must come from this very app (same host:port)
                 abort(403)
-        if request.mimetype not in ("application/json", "multipart/form-data"):
-            abort(415)                     # cross-site forms can't send JSON without permission
+        # cross-site forms can't send JSON without permission; DELETE can't be sent cross-site
+        # without a CORS pre-flight at all, so a body-less DELETE is fine
+        if request.method != "DELETE" and request.mimetype not in ("application/json", "multipart/form-data"):
+            abort(415)
 
 
 # ====================================================================== pages
@@ -456,10 +470,136 @@ def api_manual():
 @app.get("/api/sessions")
 def api_sessions():
     with contextlib.closing(db()) as con:
-        data = con.execute("SELECT session, COUNT(*), MIN(time) FROM attendance "
-                           "GROUP BY session ORDER BY MIN(time) DESC").fetchall()
+        data = sessions_db.list_all(con)
     total = len(enrolled_names())
-    return jsonify([{"session": s, "present": n, "total": total, "started": t} for s, n, t in data])
+    for r in data:
+        r["session"], r["total"] = r["name"], total
+    return jsonify(data)
+
+
+@app.post("/api/sessions")
+def api_session_create():
+    with contextlib.closing(db()) as con:
+        try:
+            sid = sessions_db.create(con, request.get_json(force=True))
+        except ValueError as e:
+            return jsonify(ok=False, error=str(e)), 400
+        return jsonify(ok=True, session=sessions_db.get(con, sid))
+
+
+@app.post("/api/sessions/<int:sid>")
+def api_session_update(sid):
+    with contextlib.closing(db()) as con:
+        try:
+            return jsonify(ok=True, session=sessions_db.update(con, sid, request.get_json(force=True)))
+        except KeyError:
+            abort(404)
+        except ValueError as e:
+            return jsonify(ok=False, error=str(e)), 400
+
+
+@app.delete("/api/sessions/<int:sid>")
+def api_session_delete(sid):
+    """Remove a (scheduled) session. Attendance of a recorded session is removed with
+    /api/delete, which also deletes its proof photos."""
+    with contextlib.closing(db()) as con:
+        try:
+            s = sessions_db.get(con, sid)
+            if s and con.execute("SELECT 1 FROM attendance WHERE session=?", (s["name"],)).fetchone():
+                return jsonify(ok=False, error="This session has attendance - use Delete session."), 400
+            sessions_db.delete(con, sid)
+        except KeyError:
+            abort(404)
+        except ValueError as e:
+            return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True)
+
+
+@app.post("/api/sessions/<int:sid>/start")
+def api_session_start(sid):
+    """Start recording attendance for this session now (camera saved with the session,
+    or the one sent from the Live tab)."""
+    d = request.get_json(force=True)
+    with contextlib.closing(db()) as con:
+        s = sessions_db.get(con, sid)
+    if not s:
+        abort(404)
+    source = d.get("source") or s.get("camera")
+    if source in (None, ""):
+        return jsonify(ok=False, error="No camera for this session - choose one on the Live tab."), 400
+    autozoom = bool(d["autozoom"]) if "autozoom" in d else bool(s.get("autozoom"))
+    try:
+        engine.start(source, s["name"], autozoom)
+    except RuntimeError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    return jsonify(ok=True)
+
+
+@app.post("/api/manual/bulk")
+def api_manual_bulk():
+    """Mark several students present (or remove them) in one go."""
+    d = request.get_json(force=True)
+    session, names, action = d.get("session"), d.get("names") or [], d.get("action")
+    if not session or action not in {"add", "remove"} or not isinstance(names, list):
+        abort(400)
+    known = set(enrolled_names())
+    names = [n for n in names if n in known]
+    done = 0
+    with contextlib.closing(db()) as con:
+        sessions_db.ensure(con, session)
+        for name in names:
+            if action == "add":
+                if mark_manual(con, session, name):
+                    bot.notify(name, session, "manual")
+                    done += 1
+                if engine.running and engine.session == session:
+                    engine.manual_q.append(("add", name))
+            else:
+                done += con.execute("DELETE FROM attendance WHERE session=? AND name=?",
+                                    (session, name)).rowcount
+                con.commit()
+                if engine.running and engine.session == session:
+                    engine.manual_q.append(("remove", name))
+            audit(con, session, name, f"manual {action} (bulk)")
+    if cloud is not None:
+        cloud._wake.set()
+    return jsonify(ok=True, changed=done)
+
+
+# ---------------------------------------------------------------- scheduler
+def scheduler_tick(now=None):
+    """Start a scheduled session at its start time and stop it at its end time."""
+    from datetime import datetime as _dt
+    now = now or _dt.now()
+    with contextlib.closing(db()) as con:
+        if engine.running:
+            cur = sessions_db.by_name(con, engine.session)
+            if cur and cur.get("auto_start") and cur.get("end_at") and \
+                    now.strftime(sessions_db.FMT) >= cur["end_at"]:
+                engine.stop()
+                engine.events.appendleft({"time": now.strftime("%H:%M:%S"),
+                                          "text": f"Scheduled end: {cur['name']} stopped"})
+            return
+        sessions_db.missed(con, now)
+        for s in sessions_db.due(con, now):
+            try:
+                engine.start(s["camera"], s["name"], bool(s["autozoom"]))
+                engine.events.appendleft({"time": now.strftime("%H:%M:%S"),
+                                          "text": f"Scheduled start: {s['name']}"})
+                return
+            except Exception as e:                    # camera off etc.: retry on the next tick
+                sessions_db.set_error(con, s["id"], f"Could not start: {e}")
+
+
+def start_scheduler(every=15):
+    def loop():
+        while True:
+            try:
+                scheduler_tick()
+            except Exception:
+                pass
+            time.sleep(every)
+    threading.Thread(target=loop, daemon=True).start()
 
 
 @app.post("/api/delete")
@@ -478,6 +618,8 @@ def api_delete():
         files = [f for r in con.execute(f"SELECT snapshot, frame_snapshot FROM attendance{where}", args)
                  for f in r if f]
         n = con.execute(f"DELETE FROM attendance{where}", args).rowcount
+        con.execute(f"DELETE FROM sessions{where.replace('session=?', 'name=?')}" +
+                    (" AND status<>'live'" if where else " WHERE status<>'live'"), args)
         for table in ("notifications", "zoom_events"):
             try:
                 con.execute(f"DELETE FROM {table}{where}", args)
@@ -502,6 +644,45 @@ def api_zoomlog():
         rows_ = [dict(r) for r in con.execute(
             "SELECT * FROM zoom_events WHERE session=? ORDER BY time", (request.args.get("session"),))]
     return jsonify(rows_)
+
+
+@app.get("/api/student/<name>")
+def api_student_profile(name):
+    """Everything about one student: account, enrolment, attendance % and full history
+    (one row per session: present via Face / Manual, or absent) with proof photos."""
+    name = safe_student_name(name)
+    with contextlib.closing(db()) as con:
+        con.row_factory = sqlite3.Row
+        acct = con.execute("SELECT roll, pin_hash IS NOT NULL AS has_pin, tg_chat_id IS NOT NULL AS telegram "
+                           "FROM students WHERE name=?", (name,)).fetchone()
+        sessions = [r[0] for r in con.execute(
+            "SELECT session FROM attendance GROUP BY session ORDER BY MIN(time) DESC")]
+        mine = {r["session"]: dict(r) for r in con.execute(
+            "SELECT * FROM attendance WHERE name=?", (name,))}
+        sent = {r["session"]: r["status"] for r in con.execute(
+            "SELECT session, status FROM notifications WHERE name=? ORDER BY time", (name,))}
+    folder = config.DATASET_DIR / name
+    photos = sum(1 for f in folder.iterdir() if f.suffix.lower() in IMG_EXT) if folder.exists() else 0
+    history = []
+    for s in sessions:
+        r = mine.get(s)
+        if r:
+            r["status"], r["notified"] = "present", sent.get(s, "-")
+            history.append(r)
+        else:
+            history.append({"session": s, "status": "absent"})
+    attended = sum(1 for h in history if h["status"] == "present")
+    sims = [h["similarity"] for h in history if h.get("similarity")]
+    return jsonify(name=name, roll=acct["roll"] if acct else None,
+                   has_pin=bool(acct and acct["has_pin"]), telegram=bool(acct and acct["telegram"]),
+                   enrolled=name in set(enrolled_names()), photos=photos,
+                   attended=attended, total=len(sessions),
+                   percent=round(100 * attended / len(sessions)) if sessions else None,
+                   face=sum(1 for h in history if h.get("method") == "auto"),
+                   manual=sum(1 for h in history if h["status"] == "present" and h.get("method") != "auto"),
+                   avg_match=round(sum(sims) / len(sims), 3) if sims else None,
+                   last_seen=max((h["time"] for h in history if h.get("time")), default=None),
+                   history=history)
 
 
 @app.get("/api/export")
@@ -765,6 +946,7 @@ if __name__ == "__main__":
     get_app()
     start_student_portal()
     get_cloud()                       # online dashboard sync (does nothing until configured)
+    start_scheduler()                 # auto-start / auto-stop scheduled sessions
     url = "http://127.0.0.1:5000"
     print(f"Teacher app: {url}   (only this laptop; Ctrl+C to quit)")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()

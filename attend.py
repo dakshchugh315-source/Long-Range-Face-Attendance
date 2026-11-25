@@ -21,6 +21,7 @@ import cv2
 import numpy as np
 
 import config
+import sessions_db
 import students_db
 from face_engine import Gallery, detect, embed, ensure_bgr, face_width, is_turned_away
 
@@ -50,6 +51,7 @@ def open_db(path=None):
         face_px INTEGER, reason TEXT, seconds REAL, recognised TEXT)""")
     con.commit()
     students_db.init(con)
+    sessions_db.init(con)
     return con
 
 
