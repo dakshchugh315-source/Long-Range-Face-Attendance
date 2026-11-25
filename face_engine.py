@@ -182,6 +182,28 @@ def embed(frame, face, enhance=None):
     return face.normed_embedding
 
 
+def embed_batch(frame, faces):
+    """Recognise many faces of one frame in ONE model call (a crowded classroom has
+    10-40 faces per frame; one batched ArcFace run is cheaper than N single runs).
+    Sets face.embedding on each face; equivalent to embed() without dark-face enhancement."""
+    todo = [f for f in faces if f.get("embedding") is None and f.kps is not None]
+    if not todo:
+        return
+    if config.ENHANCE_DARK_FACES:                 # rare path: keep the per-face enhancer
+        for f in todo:
+            embed(frame, f)
+        return
+    from insightface.utils import face_align
+    frame = ensure_bgr(frame)
+    rec = get_app().models["recognition"]
+    size = rec.input_size[0]
+    crops = [face_align.norm_crop(frame, landmark=f.kps, image_size=size) for f in todo]
+    for start in range(0, len(crops), 32):        # keep memory bounded for very large classes
+        feats = rec.get_feat(crops[start:start + 32])
+        for f, e in zip(todo[start:start + 32], feats):
+            f["embedding"] = e
+
+
 def is_turned_away(face):
     """True for strong side/back views (nose far outside the eyes) - such faces
     often can't be recognised; shown as 'turned away' instead of 'Unknown'."""

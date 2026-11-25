@@ -499,8 +499,17 @@ class AutoZoom:
             # every seat; one row fewer because faces sit in the middle band
             cols = max(2, int(np.ceil(z)))
             rows = max(1, int(np.ceil(z)) - 1)
-            self.sweep_queue = [((i + 0.5) / cols, (j + 0.5) / rows)
-                                for j in range(rows) for i in range(cols)]
+            cov = getattr(self, "coverage", None)
+            if cov is not None and (cols, rows) == (3, 2):
+                # classroom-aware: visit only regions not inspected yet or needing review,
+                # most urgent first; completed regions are never swept again
+                self.sweep_queue = cov.regions_to_visit()
+                if not self.sweep_queue:
+                    self.fruitless_sweeps = config.AUTOZOOM_MAX_FRUITLESS   # coverage done -> IDLE
+                    return False
+            else:
+                self.sweep_queue = [((i + 0.5) / cols, (j + 0.5) / rows)
+                                    for j in range(rows) for i in range(cols)]
             self.state = "SWEEP"
             return self._go_sweep_next()
         return False

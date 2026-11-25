@@ -21,9 +21,10 @@ import cv2
 import numpy as np
 
 import config
+import classroom
 import sessions_db
 import students_db
-from face_engine import Gallery, detect, embed, ensure_bgr, face_width, is_turned_away
+from face_engine import Gallery, detect, embed, embed_batch, ensure_bgr, face_width, is_turned_away
 
 
 # ---------------------------------------------------------------- database
@@ -52,6 +53,7 @@ def open_db(path=None):
     con.commit()
     students_db.init(con)
     sessions_db.init(con)
+    classroom.init(con)
     return con
 
 
@@ -354,6 +356,7 @@ def process_frame(frame, tracks, gallery, present, con, session, camera=None, vo
     # 1) recognise. A track already marked present is re-checked every REVERIFY_EVERY frames,
     #    so if its box has moved onto someone else that person still gets recognised.
     results = {}                                   # face index -> (name, sim)
+    todo = []                                      # faces to recognise this frame
     for i, (face, tr) in enumerate(zip(faces, owners)):
         tr.since_rec += 1
         tr.since_check += 1
@@ -365,10 +368,14 @@ def process_frame(frame, tracks, gallery, present, con, session, camera=None, vo
                 and not tr.reacquired):
             continue                                # same face, followed frame to frame: skip work
         tr.since_check = 0
-        name, sim = gallery.match(embed(frame, face), px)
+        todo.append(i)
+    embed_batch(frame, [faces[i] for i in todo])    # ALL faces of the frame in one model call
+    for i in todo:
+        face, tr = faces[i], owners[i]
+        name, sim = gallery.match(face.normed_embedding, face_width(face))
         if name != "Unknown":
             results[i] = (name, sim)
-        elif marked_track:
+        elif tr.label()[0] in present:
             tr.since_rec = 0       # re-check inconclusive (head turned): keep the name; only a
                                    # DIFFERENT confident name may replace it
     if info is not None:
@@ -383,6 +390,11 @@ def process_frame(frame, tracks, gallery, present, con, session, camera=None, vo
         if best_for[name] != i:
             del results[i]
             owners[i].name, owners[i].since_rec = "Unknown", 10 ** 6
+    tried = set(todo)
+    if info is not None and any(i not in results for i in tried):
+        if clean is None:
+            clean = frame.copy()                     # unannotated frame for unresolved-face crops
+        info["clean"] = clean
     # 3) vote, mark, draw
     for i, (face, box, tr) in enumerate(zip(faces, boxes, owners)):
         px = face_width(face)
@@ -400,8 +412,10 @@ def process_frame(frame, tracks, gallery, present, con, session, camera=None, vo
         if info is not None:
             # votes = scan progress shown as "k/5"; the auto-zoom controller must know it so it
             # never moves the camera away from a face that is being scanned
-            info.setdefault("faces", []).append({"box": box, "px": px, "label": label, "votes": n,
-                                                  "need": need})
+            info.setdefault("faces", []).append({
+                "box": box, "px": px, "label": label, "votes": n, "need": need, "track": tr.id,
+                "tried": i in tried,
+                "emb": face.normed_embedding if (i in tried and i not in results) else None})
 
         if label != "Unknown" and n >= need and label not in present:
             bsim, bpx, bframe, bbox, bzoom = voter.best[label]

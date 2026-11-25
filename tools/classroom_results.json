@@ -1,0 +1,707 @@
+[
+ {
+  "students_in_class": 5,
+  "frame": "1920x1080",
+  "strangers": 2,
+  "absent_enrolled": 1,
+  "faces_placed": 7,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 1.0,
+  "correct_marks": 4,
+  "missed_students": 1,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 2,
+  "verdict": "Coverage Review Required",
+  "headline": "4 Confirmed Present / 2 Not Yet Verified",
+  "weak_regions": [
+   "Back-centre",
+   "Front-left"
+  ],
+  "missed_detail": [
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   }
+  ],
+  "names_shown": 132,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 488,
+  "ms_per_frame_max": 1438
+ },
+ {
+  "students_in_class": 10,
+  "frame": "1920x1080",
+  "strangers": 2,
+  "absent_enrolled": 1,
+  "faces_placed": 12,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 1.0,
+  "correct_marks": 9,
+  "missed_students": 1,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 3,
+  "verdict": "Coverage Review Required",
+  "headline": "9 Confirmed Present / 2 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Back-centre",
+   "Front-left"
+  ],
+  "missed_detail": [
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   }
+  ],
+  "names_shown": 197,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 351,
+  "ms_per_frame_max": 827
+ },
+ {
+  "students_in_class": 20,
+  "frame": "1920x1080",
+  "strangers": 2,
+  "absent_enrolled": 2,
+  "faces_placed": 22,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 0.955,
+  "correct_marks": 18,
+  "missed_students": 2,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 3,
+  "verdict": "Coverage Review Required",
+  "headline": "18 Confirmed Present / 4 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Front-centre",
+   "Front-right"
+  ],
+  "missed_detail": [
+   {
+    "size": 28,
+    "covered": false,
+    "dark": true,
+    "detected": false
+   },
+   {
+    "size": 28,
+    "covered": true,
+    "dark": false,
+    "detected": false
+   }
+  ],
+  "names_shown": 482,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 416,
+  "ms_per_frame_max": 1465
+ },
+ {
+  "students_in_class": 40,
+  "frame": "1920x1080",
+  "strangers": 4,
+  "absent_enrolled": 4,
+  "faces_placed": 44,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 0.955,
+  "correct_marks": 36,
+  "missed_students": 4,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 8,
+  "verdict": "Coverage Review Required",
+  "headline": "36 Confirmed Present / 8 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Back-centre",
+   "Front-left",
+   "Front-centre",
+   "Front-right"
+  ],
+  "missed_detail": [
+   {
+    "size": 28,
+    "covered": false,
+    "dark": true,
+    "detected": false
+   },
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 28,
+    "covered": true,
+    "dark": false,
+    "detected": false
+   }
+  ],
+  "names_shown": 1072,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 801,
+  "ms_per_frame_max": 2315
+ },
+ {
+  "students_in_class": 60,
+  "frame": "1920x1080",
+  "strangers": 6,
+  "absent_enrolled": 6,
+  "faces_placed": 66,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 0.985,
+  "correct_marks": 54,
+  "missed_students": 6,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 10,
+  "verdict": "Coverage Review Required",
+  "headline": "54 Confirmed Present / 12 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Back-centre",
+   "Back-right",
+   "Front-centre",
+   "Front-right"
+  ],
+  "missed_detail": [
+   {
+    "size": 28,
+    "covered": false,
+    "dark": true,
+    "detected": false
+   },
+   {
+    "size": 28,
+    "covered": true,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Strom_Thurmond",
+    "px": 32,
+    "own_sim": 0.39,
+    "best_other": 0.13
+   },
+   {
+    "size": 56,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 53,
+    "own_sim": 0.34,
+    "best_other": 0.14
+   },
+   {
+    "size": 70,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 66,
+    "own_sim": 0.39,
+    "best_other": 0.12
+   },
+   {
+    "size": 70,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   }
+  ],
+  "names_shown": 1625,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 1316,
+  "ms_per_frame_max": 4217
+ },
+ {
+  "students_in_class": 60,
+  "frame": "3840x2160",
+  "strangers": 6,
+  "absent_enrolled": 6,
+  "faces_placed": 66,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 0.985,
+  "correct_marks": 58,
+  "missed_students": 2,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 9,
+  "verdict": "Coverage Review Required",
+  "headline": "58 Confirmed Present / 8 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Back-centre",
+   "Front-left",
+   "Front-centre"
+  ],
+  "missed_detail": [
+   {
+    "size": 168,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 168,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 165,
+    "own_sim": 0.37,
+    "best_other": 0.18
+   }
+  ],
+  "names_shown": 1703,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 2469,
+  "ms_per_frame_max": 8153
+ },
+ {
+  "students_in_class": 100,
+  "frame": "1920x1080",
+  "strangers": 10,
+  "absent_enrolled": 10,
+  "faces_placed": 110,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 0.991,
+  "correct_marks": 81,
+  "missed_students": 19,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 24,
+  "verdict": "Coverage Review Required",
+  "headline": "81 Confirmed Present / 29 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Back-centre",
+   "Front-left",
+   "Front-centre",
+   "Front-right"
+  ],
+  "missed_detail": [
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 34,
+    "own_sim": 0.24,
+    "best_other": 0.15
+   },
+   {
+    "size": 28,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Alvaro_Uribe",
+    "px": 39,
+    "own_sim": 0.33,
+    "best_other": 0.14
+   },
+   {
+    "size": 46,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 52,
+    "own_sim": 0.21,
+    "best_other": 0.18
+   },
+   {
+    "size": 46,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 44,
+    "own_sim": 0.23,
+    "best_other": 0.14
+   },
+   {
+    "size": 46,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Cindy_Crawford",
+    "px": 52,
+    "own_sim": 0.29,
+    "best_other": 0.2
+   },
+   {
+    "size": 46,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 48,
+    "own_sim": 0.33,
+    "best_other": 0.17
+   },
+   {
+    "size": 56,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 53,
+    "own_sim": 0.3,
+    "best_other": 0.15
+   },
+   {
+    "size": 56,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Ozzy_Osbourne",
+    "px": 49,
+    "own_sim": 0.2,
+    "best_other": 0.11
+   },
+   {
+    "size": 65,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 57,
+    "own_sim": 0.34,
+    "best_other": 0.17
+   },
+   {
+    "size": 65,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 63,
+    "own_sim": 0.25,
+    "best_other": 0.19
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 52,
+    "own_sim": 0.12,
+    "best_other": 0.18
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 59,
+    "own_sim": 0.1,
+    "best_other": 0.18
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 63,
+    "own_sim": 0.33,
+    "best_other": 0.21
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 74,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 68,
+    "own_sim": 0.25,
+    "best_other": 0.14
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 66,
+    "own_sim": 0.23,
+    "best_other": 0.14
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 70,
+    "own_sim": 0.14,
+    "best_other": 0.17
+   },
+   {
+    "size": 74,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 75,
+    "own_sim": 0.36,
+    "best_other": 0.25
+   },
+   {
+    "size": 84,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 75,
+    "own_sim": 0.32,
+    "best_other": 0.15
+   }
+  ],
+  "names_shown": 2571,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 2719,
+  "ms_per_frame_max": 6891
+ },
+ {
+  "students_in_class": 100,
+  "frame": "3840x2160",
+  "strangers": 10,
+  "absent_enrolled": 10,
+  "faces_placed": 110,
+  "faces_below_recognisable_size": 0,
+  "detection_recall": 0.982,
+  "correct_marks": 83,
+  "missed_students": 17,
+  "wrong_marks": 0,
+  "absentees_marked": 0,
+  "strangers_marked": 0,
+  "duplicate_rows": 0,
+  "unresolved_listed": 26,
+  "verdict": "Coverage Review Required",
+  "headline": "83 Confirmed Present / 27 Not Yet Verified",
+  "weak_regions": [
+   "Back-left",
+   "Back-centre",
+   "Back-right",
+   "Front-left",
+   "Front-centre",
+   "Front-right"
+  ],
+  "missed_detail": [
+   {
+    "size": 74,
+    "covered": true,
+    "dark": true,
+    "detected": true,
+    "label": "Unknown",
+    "px": 80,
+    "own_sim": 0.06,
+    "best_other": 0.15
+   },
+   {
+    "size": 74,
+    "covered": true,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 74,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Norah_Jones",
+    "px": 74,
+    "own_sim": 0.35,
+    "best_other": 0.12
+   },
+   {
+    "size": 93,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 98,
+    "own_sim": 0.01,
+    "best_other": 0.23
+   },
+   {
+    "size": 112,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 108,
+    "own_sim": 0.36,
+    "best_other": 0.17
+   },
+   {
+    "size": 112,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   },
+   {
+    "size": 130,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 111,
+    "own_sim": 0.26,
+    "best_other": 0.15
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 126,
+    "own_sim": 0.38,
+    "best_other": 0.17
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 113,
+    "own_sim": 0.22,
+    "best_other": 0.24
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 127,
+    "own_sim": 0.27,
+    "best_other": 0.21
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Theodore_Tweed_Roosevelt",
+    "px": 131,
+    "own_sim": 0.4,
+    "best_other": 0.16
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 138,
+    "own_sim": 0.15,
+    "best_other": 0.18
+   },
+   {
+    "size": 149,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 134,
+    "own_sim": 0.26,
+    "best_other": 0.13
+   },
+   {
+    "size": 149,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 135,
+    "own_sim": 0.22,
+    "best_other": 0.21
+   },
+   {
+    "size": 149,
+    "covered": true,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 147,
+    "own_sim": 0.23,
+    "best_other": 0.16
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": true,
+    "label": "Unknown",
+    "px": 129,
+    "own_sim": 0.18,
+    "best_other": 0.13
+   },
+   {
+    "size": 149,
+    "covered": false,
+    "dark": false,
+    "detected": false
+   }
+  ],
+  "names_shown": 2561,
+  "wrong_names_shown": 0,
+  "label_errors": [],
+  "ms_per_frame_avg": 2208,
+  "ms_per_frame_max": 10330
+ }
+]

@@ -25,6 +25,7 @@ import cv2
 from flask import Flask, Response, abort, jsonify, request, send_file, send_from_directory
 
 import config
+import classroom
 import sessions_db
 import students_db
 from attend import LatestFrame, Voter, mark_manual, open_camera, open_db, process_frame
@@ -123,6 +124,9 @@ class Engine:
                 con.close()
                 raise
         self.con = con
+        self.coverage = classroom.Coverage(session, gallery.names)
+        if self.autozoom is not None:
+            self.autozoom.coverage = self.coverage
         sessions_db.ensure(con, session, source, autozoom)
         sessions_db.set_status(con, session, "live")
         self.session, self.source, self.error = session, source, None
@@ -198,6 +202,7 @@ class Engine:
         errors_in_row = 0
         done_times = deque()
         black_run = 0                                   # consecutive all-black frames
+        last_flush = time.time()
         self.fps = 0.0
 
         def ema(key, seconds):
@@ -226,6 +231,7 @@ class Engine:
                     tracks.clear()
                 elif req not in (None, "off") and self.autozoom is None:
                     self.autozoom = req
+                    req.coverage = self.coverage
                     tracks.clear()
                 # privacy shutter closed / camera turned off by its key: the stream works but every
                 # frame is black. Say so plainly instead of silently finding nobody.
@@ -256,6 +262,15 @@ class Engine:
                     if errors_in_row >= 10:
                         raise
                     continue
+                try:
+                    view = (az.zoom, az.cx, az.cy) if az else None
+                    self.coverage.update(info, frame.shape, view, bool(az and az.settling()), self.present)
+                    if time.time() - last_flush > 3:
+                        self.coverage.flush(con)
+                        last_flush = time.time()
+                except Exception as e:                 # coverage must never stop attendance
+                    self.events.appendleft({"time": datetime.now().strftime("%H:%M:%S"),
+                                            "text": f"Coverage error: {e}"})
                 ema("detect", info.get("t_detect", 0))
                 ema("recognise", info.get("t_recog", 0))
                 if az:
@@ -297,6 +312,10 @@ class Engine:
                 reader.close()
             elif cap is not None:
                 cap.release()
+            try:
+                self.coverage.flush(con)
+            except Exception:
+                pass
             try:
                 sessions_db.set_status(con, self.session, "done", self.error
                                        if self.error and self.error != "Video file finished." else None)
@@ -452,6 +471,7 @@ def api_status():
     return jsonify(autozoom=(az.label() if az else None), autozoom_error=(az.error if az else None),
                    autozoom_state=(az.scan.state if az else None),
                    camera_state=(az.camera_state() if az else None),
+                   classroom=_classroom_summary(session, az),
                    running=engine.running, session=session, source=engine.source,
                    fps=round(engine.fps, 1), error=engine.error, timing=engine.timing,
                    enrolled=len(names), present=present,
@@ -631,10 +651,11 @@ def api_delete():
     with contextlib.closing(db()) as con:
         files = [f for r in con.execute(f"SELECT snapshot, frame_snapshot FROM attendance{where}", args)
                  for f in r if f]
+        files += [r[0] for r in con.execute(f"SELECT snapshot FROM unresolved{where}", args) if r[0]]
         n = con.execute(f"DELETE FROM attendance{where}", args).rowcount
         con.execute(f"DELETE FROM sessions{where.replace('session=?', 'name=?')}" +
                     (" AND status<>'live'" if where else " WHERE status<>'live'"), args)
-        for table in ("notifications", "zoom_events"):
+        for table in ("notifications", "zoom_events", "coverage", "unresolved"):
             try:
                 con.execute(f"DELETE FROM {table}{where}", args)
             except sqlite3.OperationalError:
@@ -663,6 +684,8 @@ def api_demo_reset():
         s = con.execute("DELETE FROM sessions").rowcount
         con.execute("DELETE FROM notifications")
         con.execute("DELETE FROM zoom_events")
+        con.execute("DELETE FROM coverage")
+        con.execute("DELETE FROM unresolved")
         con.commit()
         audit(con, "ALL", "-", f"demo reset: {n} records, {s} sessions removed")
     removed = 0
@@ -674,6 +697,59 @@ def api_demo_reset():
     if cloud is not None:
         cloud._wake.set()                                    # online copy is cleared too
     return jsonify(ok=True, records=n, sessions=s, photos=removed)
+
+
+def _classroom_summary(session, az):
+    if not session:
+        return None
+    with contextlib.closing(db()) as con:
+        rep = classroom.report(con, session, engine.enrolled if engine.running else enrolled_names())
+    live = engine.running and engine.session == session
+    return {"headline": rep["headline"], "verdict": rep["verdict"],
+            "unknown_individuals": rep["unknown_individuals"], "weak_regions": rep["weak_regions"],
+            "state": classroom.classroom_state(az.camera_state() if (az and live) else None, rep, live)}
+
+
+@app.get("/api/coverage")
+def api_coverage():
+    session = request.args.get("session")
+    if not session:
+        abort(400)
+    with contextlib.closing(db()) as con:
+        return jsonify(classroom.report(con, session, engine.enrolled if engine.running
+                                        and engine.session == session else enrolled_names()))
+
+
+@app.post("/api/unresolved/<int:uid>")
+def api_unresolved(uid):
+    """Teacher verifies an unresolved face: assign it to a student (manual mark, audited)
+    or ignore it (not a student / visitor)."""
+    d = request.get_json(force=True)
+    action = d.get("action")
+    with contextlib.closing(db()) as con:
+        row = con.execute("SELECT session, status FROM unresolved WHERE id=?", (uid,)).fetchone()
+        if not row:
+            abort(404)
+        session = row[0]
+        if action == "assign":
+            name = d.get("name")
+            if name not in set(enrolled_names()):
+                return jsonify(ok=False, error="Choose an enrolled student."), 400
+            if mark_manual(con, session, name, by="teacher, verified unresolved face"):
+                bot.notify(name, session, "manual")
+            if engine.running and engine.session == session:
+                engine.manual_q.append(("add", name))
+            con.execute("UPDATE unresolved SET status='assigned', resolved_as=? WHERE id=?", (name, uid))
+        elif action in ("ignore", "reopen"):
+            con.execute("UPDATE unresolved SET status=?, resolved_as=NULL WHERE id=?",
+                        ("ignored" if action == "ignore" else "open", uid))
+        else:
+            abort(400)
+        con.commit()
+        audit(con, session, d.get("name") or "-", f"unresolved face #{uid}: {action}")
+    if cloud is not None:
+        cloud._wake.set()
+    return jsonify(ok=True)
 
 
 @app.get("/api/zoomlog")
