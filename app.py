@@ -27,7 +27,7 @@ from flask import Flask, Response, abort, jsonify, request, send_file, send_from
 import config
 import sessions_db
 import students_db
-from attend import LatestFrame, Voter, mark_manual, open_db, process_frame
+from attend import LatestFrame, Voter, mark_manual, open_camera, open_db, process_frame
 from face_engine import Gallery, ensure_bgr, get_app
 from notify import TelegramBot
 
@@ -104,12 +104,12 @@ class Engine:
         except SystemExit as e:             # Gallery uses SystemExit for CLI messages
             raise RuntimeError(str(e))
         src = int(source) if str(source).strip().isdigit() else str(source).strip()
-        cap = cv2.VideoCapture(src)
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
+        cap = open_camera(src)
         if not cap.isOpened():
-            raise RuntimeError(f"Could not open camera: {source}. "
-                               "Phone: same Wi-Fi? URL ends with /video?")
+            raise RuntimeError(
+                "Laptop webcam gives no picture - close Teams / Zoom / the Camera app and try again."
+                if isinstance(src, int) else
+                f"Could not open camera: {source}. Phone: same Wi-Fi? IP Webcam server started?")
         con = open_db()
         present = {r[0] for r in con.execute(
             "SELECT name FROM attendance WHERE session=?", (session,))}
@@ -142,7 +142,7 @@ class Engine:
             self.events.appendleft({"time": datetime.now().strftime("%H:%M:%S"),
                                     "text": "Camera stream dropped, reconnecting"}) \
                 if time.time() - t0 < 1 else None
-            cap = cv2.VideoCapture(src)
+            cap = open_camera(src)
             if cap.isOpened():
                 reader = LatestFrame(cap)
                 ok, _ = reader.read()
@@ -197,6 +197,7 @@ class Engine:
         tracks, t_prev, voter = [], time.time(), Voter()
         errors_in_row = 0
         done_times = deque()
+        black_run = 0                                   # consecutive all-black frames
         self.fps = 0.0
 
         def ema(key, seconds):
@@ -226,6 +227,16 @@ class Engine:
                 elif req not in (None, "off") and self.autozoom is None:
                     self.autozoom = req
                     tracks.clear()
+                # privacy shutter closed / camera turned off by its key: the stream works but every
+                # frame is black. Say so plainly instead of silently finding nobody.
+                if float(frame[::16, ::16].mean()) < 3:
+                    black_run += 1
+                    if black_run >= 3:
+                        self.error = BLACK_MSG
+                elif black_run:
+                    black_run = 0
+                    if self.error == BLACK_MSG:
+                        self.error = None
                 while self.manual_q:                   # teacher's Mark present / Remove
                     action, name = self.manual_q.popleft()
                     (self.present.add if action == "add" else self.present.discard)(name)
@@ -294,6 +305,8 @@ class Engine:
             con.close()
 
 
+BLACK_MSG = ("Camera picture is completely black - open the privacy shutter / turn the camera on "
+             "(camera key, e.g. F9) or point it at the room.")
 engine = Engine()
 enroll_state = {"running": False, "output": ""}
 

@@ -211,6 +211,36 @@ def update_tracks(tracks, boxes, max_missed=15):
 
 
 # ---------------------------------------------------------------- camera
+def open_camera(src):
+    """Open a webcam index, a video file or an RTSP/HTTP stream.
+
+    Laptop webcams on Windows: the default Media Foundation backend often opens the camera
+    but then delivers no frames (error -1072875772, e.g. when another app such as Teams
+    touched it). DirectShow works on those machines, so a webcam index tries DirectShow
+    first (MJPG, configured size) and falls back to the default backend. Each candidate
+    must deliver a real frame before it is accepted."""
+    if isinstance(src, str) and src.strip().isdigit():
+        src = int(src)
+    if isinstance(src, int):
+        import sys
+        backends = ([cv2.CAP_DSHOW] if sys.platform == "win32" else []) + [cv2.CAP_ANY]
+        for be in backends:
+            cap = cv2.VideoCapture(src, be)
+            if not cap.isOpened():
+                cap.release()
+                continue
+            cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
+            for _ in range(10):                      # first frames can be empty while it warms up
+                ok, _f = cap.read()
+                if ok:
+                    return cap
+            cap.release()
+        return cv2.VideoCapture()                    # not opened -> caller reports it
+    return cv2.VideoCapture(src)
+
+
 class LatestFrame:
     """Reads a live stream in a background thread and keeps only the newest
     frame, so a slow CPU never falls seconds behind the phone/CCTV."""
@@ -428,9 +458,7 @@ def main():
     src = config.CAMERA_SOURCE if args.source is None else args.source
     if isinstance(src, str) and src.isdigit():
         src = int(src)
-    cap = cv2.VideoCapture(src)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
+    cap = open_camera(src)
     if not cap.isOpened():
         raise SystemExit(f"Could not open camera: {src}")
     is_file = isinstance(src, str) and Path(src).is_file()

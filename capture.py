@@ -29,10 +29,8 @@ def main():
     start_idx = len(list(out_dir.glob("*.jpg")))
 
     src = args.video if args.video else config.CAMERA_SOURCE
-    cap = cv2.VideoCapture(src)
-    if not args.video:
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.CAMERA_WIDTH)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.CAMERA_HEIGHT)
+    from attend import open_camera
+    cap = cv2.VideoCapture(src) if args.video else open_camera(src)
     if not cap.isOpened():
         raise SystemExit(f"Could not open camera/video: {src}")
 
