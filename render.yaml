@@ -1,0 +1,24 @@
+# Render blueprint for the online dashboard (cloud/cloud_app.py).
+# Render dashboard -> New -> Blueprint -> pick this GitHub repo -> Apply.
+# The classroom laptop stays the source of truth: it re-sends all records every
+# minute, so Render's free plan (no persistent disk, sleeps when idle) is fine.
+services:
+  - type: web
+    name: face-attendance-online
+    runtime: python
+    rootDir: cloud
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 2 -b 0.0.0.0:$PORT cloud_app:app
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: SYNC_TOKEN          # copy it into the laptop app (Students tab -> Online dashboard)
+        generateValue: true
+      - key: TEACHER_PASSWORD    # teacher login for the online dashboard
+        generateValue: true
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATA_DIR
+        value: /tmp/attendance-data

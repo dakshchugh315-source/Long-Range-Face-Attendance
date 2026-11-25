@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Face Attendance - Online</title>
+<style>
+  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; --ok:#16a34a; --bad:#dc2626; --warn:#d97706; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+  header { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:17px; margin:0; } .muted { color:var(--muted); font-size:13px; }
+  main { max-width:1100px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
+  input, button, select { font:inherit; padding:9px 12px; border-radius:8px; border:1px solid var(--line); }
+  button { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; cursor:pointer; }
+  button.ghost { background:#fff; color:var(--text); border-color:var(--line); }
+  .pill { margin-left:auto; font-size:12px; font-weight:600; padding:4px 10px; border-radius:99px; background:#e5e7eb; color:var(--muted); }
+  .pill.on { background:#dcfce7; color:var(--ok); } .pill.stale { background:#fef3c7; color:var(--warn); }
+  .grid { display:grid; grid-template-columns: 280px minmax(0,1fr); gap:14px; }
+  table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); }
+  th { font-size:12px; color:var(--muted); } tr.click { cursor:pointer; } tr.sel { background:#eef2ff; }
+  .tag { font-size:11px; padding:2px 7px; border-radius:6px; background:#eef2ff; color:var(--accent); font-weight:600; }
+  .tag.m { background:#fef3c7; color:var(--warn); }
+  .stats { display:flex; gap:10px; margin-bottom:10px; } .stat { flex:1; background:#f9fafb; border-radius:10px; padding:10px; }
+  .stat b { display:block; font-size:22px; }
+  .err { color:var(--bad); font-size:13px; min-height:18px; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Face Attendance · Online</h1>
+  <span class="muted" id="live"></span>
+  <span class="pill" id="pill">-</span>
+  <button class="ghost" id="logout" style="display:none">Log out</button>
+</header>
+<main>
+  <div class="card" id="loginCard" style="display:none;max-width:380px">
+    <h1 style="margin-bottom:8px">Teacher login</h1>
+    <form id="loginForm">
+      <input id="pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;margin-bottom:8px" required>
+      <div class="err" id="loginErr"></div>
+      <button type="submit" style="width:100%">Log in</button>
+    </form>
+    <p class="muted">Students: <a href="/student">open the student portal</a></p>
+  </div>
+  <div id="app" style="display:none">
+    <div class="grid">
+      <div class="card">
+        <b>Sessions</b>
+        <table><tbody id="sessions"></tbody></table>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <b id="title">Select a session</b>
+          <a id="csv" style="margin-left:auto;display:none"><button class="ghost">Download CSV</button></a>
+        </div>
+        <div class="stats"><div class="stat"><b id="nP" style="color:var(--ok)">-</b><span class="muted">Present</span></div>
+          <div class="stat"><b id="nA" style="color:var(--bad)">-</b><span class="muted">Absent</span></div></div>
+        <table><thead><tr><th>Name</th><th>Status</th><th>Time</th><th>How</th></tr></thead><tbody id="rows"></tbody></table>
+      </div>
+    </div>
+    <p class="muted">Recognition runs on the classroom laptop; this page shows the records it sends. No photos are stored online.</p>
+  </div>
+</main>
+<script>
+const $ = (i) => document.getElementById(i);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let current = null, data = null;
+async function load() {
+  const r = await fetch("/api/overview");
+  if (r.status === 401) { $("loginCard").style.display = ""; $("app").style.display = "none"; $("logout").style.display = "none"; return; }
+  data = await r.json();
+  $("loginCard").style.display = "none"; $("app").style.display = ""; $("logout").style.display = "";
+  const age = data.last_sync_s_ago, live = data.live || {};
+  $("pill").textContent = age == null ? "never synced" : age < 30 ? "LIVE" : `last update ${Math.round(age / 60)} min ago`;
+  $("pill").className = "pill " + (age != null && age < 30 ? "on" : "stale");
+  $("live").textContent = live.running ? `Camera running · ${live.session} · ${live.present}/${live.enrolled} present` : "Camera not running";
+  if (!current && data.sessions.length) current = data.sessions[0].session;
+  $("sessions").innerHTML = data.sessions.map((s) => `<tr class="click ${s.session === current ? "sel" : ""}" data-s="${esc(s.session)}">
+    <td>${esc(s.session)}<div class="muted">${esc(s.started)}</div></td><td>${s.present.length}/${data.students.length}</td></tr>`).join("")
+    || '<tr><td class="muted">No sessions yet</td></tr>';
+  document.querySelectorAll("#sessions tr.click").forEach((tr) => tr.onclick = () => { current = tr.dataset.s; render(); load(); });
+  render();
+}
+function render() {
+  const s = data && data.sessions.find((x) => x.session === current);
+  if (!s) return;
+  $("title").textContent = s.session;
+  $("csv").href = "/api/export?session=" + encodeURIComponent(s.session); $("csv").style.display = "";
+  $("nP").textContent = s.present.length; $("nA").textContent = s.absent.length;
+  $("rows").innerHTML = s.present.map((r) => `<tr><td>${esc(r.name)}</td><td style="color:var(--ok)">Present</td>
+      <td>${esc(r.time.slice(11, 16))}</td><td>${r.method === "auto" ? '<span class="tag">Face</span>' : '<span class="tag m">Manual</span>'}</td></tr>`).join("")
+    + s.absent.map((n) => `<tr><td>${esc(n)}</td><td style="color:var(--bad)">Absent</td><td></td><td></td></tr>`).join("");
+}
+$("loginForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const r = await fetch("/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: $("pw").value }) });
+  $("loginErr").textContent = r.ok ? "" : ((await r.json().catch(() => ({}))).error || "Login failed");
+  $("pw").value = ""; load();
+};
+$("logout").onclick = async () => { await fetch("/logout", { method: "POST" }); load(); };
+load(); setInterval(load, 5000);
+</script>
+</body>
+</html>

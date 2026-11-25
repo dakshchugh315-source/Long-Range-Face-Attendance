@@ -72,6 +72,27 @@ PTZ cameras with motorised zoom are driven over ONVIF (`ONVIF_*` settings).
 
 ---
 
+## Online dashboard (optional)
+
+Recognition always runs on the classroom laptop (it needs the camera). The laptop can also push
+attendance **records** to a small online app so the teacher and students can check from anywhere.
+No photos or face data ever leave the laptop: only names, roll numbers, PIN hashes and attendance rows.
+
+| Part | File |
+| --- | --- |
+| Online app (teacher dashboard + student portal) | `cloud/cloud_app.py` |
+| Laptop → cloud sync (every 5 s, re-sends everything each minute) | `cloud_sync.py` |
+| Render blueprint (free plan works: the laptop is the source of truth) | `render.yaml` |
+| Own Ubuntu server with Caddy instead | `cloud/deploy.sh` |
+
+1. Render → **New → Blueprint** → select this repo → **Apply**. Render generates `SYNC_TOKEN` and `TEACHER_PASSWORD` (see the service's *Environment* tab).
+2. Laptop app → **Students** tab → **Online dashboard** → paste the `https://…onrender.com` address and `SYNC_TOKEN` → **Save & sync**.
+3. Teacher: open the address and log in with `TEACHER_PASSWORD`. Students: `/student` with roll number + PIN.
+
+Database details for developers: [`docs/DATABASE.md`](docs/DATABASE.md).
+
+---
+
 ## Telegram notifications
 
 1. In Telegram, open **@BotFather**, send `/newbot`, copy the token and paste it in the **Students** tab.

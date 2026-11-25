@@ -32,6 +32,7 @@ from notify import TelegramBot
 
 PORTAL_PORT = 5001
 bot = TelegramBot(open_db)
+cloud = None                     # CloudSync, started in main (pushes records to the online dashboard)
 
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".mp4", ".mov"}
 app = Flask(__name__, static_folder=None)
@@ -251,6 +252,8 @@ class Engine:
                     cv2.rectangle(frame, (0, 0), (frame.shape[1], 44), (0, 0, 0), -1)
                     cv2.putText(frame, az.label() + ("  (moving...)" if az.settling() else ""),
                                 (12, 31), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
+                if newly and cloud is not None:
+                    cloud._wake.set()                  # push new marks to the online dashboard now
                 for name, sim, px in newly:
                     bot.notify(name, self.session, "face", sim)
                     self.events.appendleft({"time": datetime.now().strftime("%H:%M:%S"),
@@ -718,6 +721,36 @@ def api_phone_optimize():
                    note="Stop and Start attendance again so the new resolution is used.")
 
 
+def _live():
+    return {"running": engine.running, "session": engine.session,
+            "present": len(engine.present), "enrolled": len(engine.enrolled)}
+
+
+def get_cloud():
+    global cloud
+    if cloud is None:
+        from cloud_sync import CloudSync
+        cloud = CloudSync(_live)
+    return cloud
+
+
+@app.get("/api/cloud")
+def api_cloud_status():
+    url, token = get_cloud().settings()
+    return jsonify(url=url, has_token=bool(token), status=get_cloud().status)
+
+
+@app.post("/api/cloud")
+def api_cloud_set():
+    d = request.get_json(force=True)
+    try:
+        get_cloud().configure(d.get("url"), d.get("token"))
+    except ValueError as e:
+        return jsonify(ok=False, error=str(e)), 400
+    ok = get_cloud().push_once(force=True)
+    return jsonify(ok=ok, status=get_cloud().status), (200 if ok else 502)
+
+
 def start_student_portal():
     from werkzeug.serving import make_server
     from student_portal import portal
@@ -731,6 +764,7 @@ if __name__ == "__main__":
     print("Loading face models...")
     get_app()
     start_student_portal()
+    get_cloud()                       # online dashboard sync (does nothing until configured)
     url = "http://127.0.0.1:5000"
     print(f"Teacher app: {url}   (only this laptop; Ctrl+C to quit)")
     threading.Timer(1.0, lambda: webbrowser.open(url)).start()

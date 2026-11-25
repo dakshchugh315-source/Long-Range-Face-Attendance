@@ -189,6 +189,16 @@
       <pre id="enrollOut" style="display:none"></pre>
     </div>
     <div class="card" style="margin-bottom:16px">
+      <h3>Online dashboard</h3>
+      <div class="controls" style="margin:0">
+        <label>Online address <input id="cloudUrl" size="34" placeholder="https://attendance.example.com"></label>
+        <label>Sync token <input id="cloudToken" type="password" size="28" autocomplete="off" placeholder="(unchanged)"></label>
+        <button id="cloudSave" class="btn">Save &amp; sync</button>
+        <span id="cloudStatus" class="muted"></span>
+      </div>
+      <p class="muted" style="margin:10px 0 0">Only attendance records, roll numbers and PIN hashes go online - never photos or face data.</p>
+    </div>
+    <div class="card" style="margin-bottom:16px">
       <h3>Student notifications</h3>
       <div class="controls" style="margin-bottom:10px">
         <label>Telegram bot token (from @BotFather)
@@ -471,7 +481,23 @@ async function loadStudents() {
   loadRoster();
 }
 
+async function loadCloud() {
+  try {
+    const c = await api("/api/cloud");
+    if (document.activeElement !== $("cloudUrl")) $("cloudUrl").value = c.url || "";
+    $("cloudStatus").textContent = c.status;
+  } catch {}
+}
+$("cloudSave").onclick = async () => {
+  $("cloudStatus").textContent = "Connecting...";
+  const body = { url: $("cloudUrl").value };
+  body.token = $("cloudToken").value;
+  try { const r = await post("/api/cloud", body); $("cloudStatus").textContent = r.status; $("cloudToken").value = ""; }
+  catch (e) { $("cloudStatus").textContent = e.message; }
+};
+
 async function loadRoster() {
+  loadCloud();
   const r = await api("/api/roster");
   $("tgStatus").textContent = r.telegram + (r.bot ? ` — students open t.me/${r.bot}` : "");
   $("portalUrl").textContent = r.portal;
