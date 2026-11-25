@@ -664,10 +664,13 @@ def api_student_profile(name):
     folder = config.DATASET_DIR / name
     photos = sum(1 for f in folder.iterdir() if f.suffix.lower() in IMG_EXT) if folder.exists() else 0
     history = []
+    with contextlib.closing(db()) as con:
+        srows = {s: sessions_db.by_name(con, s) for s in sessions}
     for s in sessions:
         r = mine.get(s)
         if r:
             r["status"], r["notified"] = "present", sent.get(s, "-")
+            r["late"] = sessions_db.is_late(srows.get(s), r["time"])
             history.append(r)
         else:
             history.append({"session": s, "status": "absent"})

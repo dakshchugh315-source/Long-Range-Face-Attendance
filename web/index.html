@@ -4,77 +4,125 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Face Attendance</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%232563eb'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%234f46e5'/%3E%3Ccircle cx='8' cy='6.5' r='2.6' fill='white'/%3E%3Cpath d='M3.5 13c.8-2.3 2.5-3.4 4.5-3.4s3.7 1.1 4.5 3.4' fill='white'/%3E%3C/svg%3E">
 <style>
   :root {
-    --bg: #f4f5f7; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e5e7eb;
-    --accent: #2563eb; --ok: #16a34a; --ok-bg: #dcfce7; --warn: #d97706; --bad: #dc2626; --bad-bg: #fee2e2;
+    --bg: #f5f6fa; --surface: #fff; --soft: #f8fafc; --text: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --accent: #4f46e5; --accent-soft: #eef2ff; --ok: #059669; --ok-soft: #d1fae5; --bad: #dc2626; --bad-soft: #fee2e2;
+    --warn: #d97706; --warn-soft: #fef3c7; --radius: 14px; --shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.05);
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
-  header { display: flex; align-items: center; gap: 24px; padding: 12px 20px; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
-  header h1 { font-size: 17px; margin: 0; white-space: nowrap; }
-  nav { display: flex; gap: 4px; }
-  nav button { border: 0; background: none; padding: 8px 14px; border-radius: 8px; font: inherit; color: var(--muted); cursor: pointer; }
-  nav button.active { background: #eef2ff; color: var(--accent); font-weight: 600; }
-  .pill { margin-left: auto; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 600; background: #e5e7eb; color: var(--muted); }
-  .pill.live { background: var(--ok-bg); color: var(--ok); }
-  main { padding: 18px 20px; max-width: 1400px; margin: 0 auto; }
+  body { margin: 0; font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  button, input, select { font: inherit; }
+  header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 22px; padding: 10px 22px;
+           background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .brand i { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #6366f1, #4338ca); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 15px; }
+  nav { display: flex; gap: 2px; background: var(--soft); border: 1px solid var(--line); padding: 3px; border-radius: 11px; }
+  nav button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; color: var(--muted); cursor: pointer; font-weight: 600; }
+  nav button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+  .pill { margin-left: auto; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #e2e8f0; color: var(--muted); white-space: nowrap; }
+  .pill.live { background: var(--ok-soft); color: var(--ok); }
+  .pill.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; animation: blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  main { padding: 20px 22px 40px; max-width: 1440px; margin: 0 auto; }
   .tab { display: none; } .tab.active { display: block; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
-  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 16px; }
-  label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); font-weight: 600; }
-  input, select { font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); min-width: 0; }
-  .btn { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 8px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
-  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 14px; }
+  .two > .card, .sess-grid > .card { margin-top: 0; }
+  h2 { font-size: 15px; margin: 0; } h3 { font-size: 12px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .muted { color: var(--muted); } .small { font-size: 12px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  input, select { padding: 8px 11px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--text); min-width: 0; }
+  input:focus, select:focus { outline: 2px solid #c7d2fe; border-color: var(--accent); }
+  input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); }
+  .check { flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: var(--text); font-weight: 500; }
+  .btn { font-weight: 600; padding: 8px 15px; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--soft); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); } .btn.primary:hover { background: #4338ca; }
+  .btn.go { background: var(--ok); color: #fff; border-color: var(--ok); }
   .btn.danger { background: var(--bad); color: #fff; border-color: var(--bad); }
-  .btn.small { padding: 4px 10px; font-size: 12px; }
-  .btn:disabled { opacity: .5; cursor: default; }
-  .live-grid { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; }
-  .video { background: #111827; border-radius: 12px; aspect-ratio: 16/9; display: grid; place-items: center; overflow: hidden; color: #9ca3af; }
-  .video img { width: 100%; height: 100%; object-fit: contain; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
-  .stat b { display: block; font-size: 24px; } .stat span { color: var(--muted); font-size: 12px; }
-  .stat.ok b { color: var(--ok); } .stat.bad b { color: var(--bad); }
-  h3 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
-  .list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow: auto; }
-  .row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; background: #f9fafb; }
-  .row img { width: 38px; height: 38px; border-radius: 8px; object-fit: cover; background: #e5e7eb; }
-  .row .grow { flex: 1; min-width: 0; } .row .sub { color: var(--muted); font-size: 12px; }
-  .tag { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #eef2ff; color: var(--accent); }
-  .tag.manual { background: #fef3c7; color: var(--warn); }
-  .log { font-size: 12px; color: var(--muted); max-height: 140px; overflow: auto; }
-  .err { background: var(--bad-bg); color: var(--bad); padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; display: none; }
-  .side { display: flex; flex-direction: column; gap: 12px; }
+  .btn.ghost-bad { color: var(--bad); border-color: #fecaca; }
+  .btn.small { padding: 4px 10px; font-size: 12px; border-radius: 7px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .err { background: var(--bad-soft); color: var(--bad); padding: 9px 13px; border-radius: 10px; margin: 12px 0 0; display: none; font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); } .tag.bad { background: var(--bad-soft); color: var(--bad); }
+  .tag.warn, .tag.manual { background: var(--warn-soft); color: var(--warn); } .tag.grey { background: #f1f5f9; color: var(--muted); }
+  .av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #e2e8f0; flex: none; }
+  [data-student] { cursor: pointer; } .name-link { font-weight: 600; } [data-student]:hover .name-link { color: var(--accent); text-decoration: underline; }
   table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
-  th { font-size: 12px; color: var(--muted); }
-  tr.click { cursor: pointer; } tr.click:hover { background: #f9fafb; } tr.sel { background: #eef2ff; }
-  .records { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; }
-  .students { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
-  .student { text-align: center; } .student img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; background: #e5e7eb; }
-  pre { background: #f9fafb; padding: 10px; border-radius: 8px; white-space: pre-wrap; font-size: 12px; max-height: 260px; overflow: auto; }
-  dialog { border: 0; border-radius: 14px; padding: 0; max-width: min(960px, 94vw); }
-  dialog::backdrop { background: rgba(0,0,0,.55); }
-  .proof { display: grid; grid-template-columns: minmax(0, 1fr) 220px; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+  tbody tr:hover { background: var(--soft); }
+  /* live */
+  .live-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; margin-top: 16px; }
+  .video { background: #0b1020; border-radius: var(--radius); aspect-ratio: 16/9; display: grid; place-items: center; overflow: hidden; color: #94a3b8; text-align: center; padding: 20px; }
+  .video img { width: 100%; height: 100%; object-fit: contain; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; box-shadow: var(--shadow); }
+  .stat b { display: block; font-size: 26px; line-height: 1.15; } .stat span { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .stat.ok b { color: var(--ok); } .stat.bad b { color: var(--bad); } .stat.warn b { color: var(--warn); }
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .side .card + .card { margin-top: 0; }
+  .list { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow: auto; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; }
+  .row:hover { background: var(--soft); }
+  .row .grow { flex: 1; min-width: 0; } .row .sub { color: var(--muted); font-size: 12px; }
+  .log { font-size: 12px; color: var(--muted); max-height: 150px; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
+  #phoneCtl { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  /* sessions */
+  .sess-grid { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 16px; }
+  .sess-item { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 11px; cursor: pointer; border: 1px solid transparent; }
+  .sess-item:hover { background: var(--soft); } .sess-item.sel { background: var(--accent-soft); border-color: #c7d2fe; }
+  .sess-item .grow { flex: 1; min-width: 0; } .sess-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 4px 4px; }
+  .detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .detail-head .title { flex: 1; min-width: 200px; }
+  .bulkbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; background: var(--soft); border-radius: 10px; margin: 12px 0 6px; }
+  .empty { text-align: center; padding: 40px 10px; color: var(--muted); }
+  /* students */
+  .stu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; }
+  .stu { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; text-align: center; box-shadow: var(--shadow); transition: transform .12s; }
+  .stu:hover { transform: translateY(-2px); border-color: #c7d2fe; }
+  .stu img { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  pre { background: var(--soft); padding: 10px; border-radius: 10px; white-space: pre-wrap; font-size: 12px; max-height: 260px; overflow: auto; margin: 12px 0 0; }
+  /* dialogs + drawer */
+  dialog { border: 0; border-radius: 16px; padding: 0; max-width: min(980px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(15,23,42,.55); }
+  .proof { display: grid; grid-template-columns: minmax(0, 1fr) 230px; }
   .proof > img { width: 100%; display: block; background: #000; }
   .proof .meta { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
-  .proof .meta img { width: 100%; border-radius: 8px; }
-  .muted { color: var(--muted); }
-  @media (max-width: 900px) {
-    .live-grid, .records, .proof { grid-template-columns: 1fr; }
-    header { flex-wrap: wrap; gap: 10px; padding: 10px 16px; } main { padding: 16px; }
+  .proof .meta img { width: 100%; border-radius: 10px; }
+  .form { padding: 20px; width: min(520px, 92vw); display: flex; flex-direction: column; gap: 12px; }
+  .form .two { gap: 10px; }
+  .scrim { position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 30; display: none; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 100vw); background: var(--surface); z-index: 31;
+            box-shadow: -10px 0 40px rgba(15,23,42,.18); transform: translateX(100%); transition: transform .2s ease; overflow: auto; }
+  .drawer.open { transform: none; } .scrim.open { display: block; }
+  .p-head { display: flex; gap: 14px; align-items: center; padding: 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+  .p-head img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+  .ring { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .ring span { width: 74px; height: 74px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 20px; font-weight: 800; }
+  .p-body { padding: 18px 20px 30px; }
+  .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
+  .kv div { background: var(--soft); border-radius: 10px; padding: 9px 10px; } .kv b { display: block; font-size: 17px; }
+  @media (max-width: 1000px) {
+    .live-grid, .sess-grid, .two, .proof { grid-template-columns: 1fr; }
+    header { flex-wrap: wrap; gap: 10px; padding: 10px 14px; } main { padding: 14px; }
   }
 </style>
 </head>
 <body>
 <header>
-  <h1>Face Attendance</h1>
+  <div class="brand"><i>☺</i> Face Attendance</div>
   <nav>
     <button data-tab="live" class="active">Live</button>
-    <button data-tab="records">Records</button>
+    <button data-tab="records">Sessions</button>
     <button data-tab="students">Students</button>
+    <button data-tab="settings">Settings</button>
   </nav>
   <span id="pill" class="pill">Stopped</span>
 </header>
@@ -82,60 +130,61 @@
 <main>
   <!-- ============================ LIVE -->
   <section id="live" class="tab active">
-    <div class="controls">
-      <label>Session / lecture
-        <input id="session" size="22">
-      </label>
-      <label>Camera
-        <select id="camType">
-          <option value="0">Laptop webcam</option>
-          <option value="phone">Phone (IP Webcam app)</option>
-          <option value="custom">CCTV / custom URL</option>
-        </select>
-      </label>
-      <label id="urlWrap" style="display:none">Address
-        <input id="camUrl" size="30" placeholder="http://192.168.1.7:8080">
-      </label>
-      <label id="streamWrap" style="display:none">Stream
-        <select id="phoneStream">
-          <option value="h264">H.264 (faster)</option>
-          <option value="mjpeg">MJPEG (if H.264 fails)</option>
-        </select>
-      </label>
-      <button id="startBtn" class="btn primary">Start attendance</button>
-      <button id="stopBtn" class="btn danger" disabled>Stop</button>
+    <div class="card">
+      <div class="controls">
+        <label style="flex:1;min-width:200px">Session / lecture
+          <input id="session" list="upcomingList" placeholder="e.g. DL Lecture 5">
+          <datalist id="upcomingList"></datalist>
+        </label>
+        <label>Camera
+          <select id="camType">
+            <option value="0">Laptop webcam</option>
+            <option value="phone">Phone (IP Webcam app)</option>
+            <option value="custom">CCTV / custom URL</option>
+          </select>
+        </label>
+        <label id="urlWrap" style="display:none">Address
+          <input id="camUrl" size="24" placeholder="http://192.168.1.7:8080">
+        </label>
+        <label id="streamWrap" style="display:none">Stream
+          <select id="phoneStream">
+            <option value="h264">H.264 (faster)</option>
+            <option value="mjpeg">MJPEG (if H.264 fails)</option>
+          </select>
+        </label>
+        <button id="startBtn" class="btn go">▶ Start attendance</button>
+        <button id="stopBtn" class="btn danger" disabled>■ Stop</button>
+      </div>
+      <div id="phoneCtl" class="controls" style="display:none">
+        <label style="flex:1;min-width:170px;max-width:300px">Zoom <span id="zoomVal">1.0x</span>
+          <input id="zoom" type="range" min="1" max="8" step="0.1" value="1">
+        </label>
+        <label style="flex:1;min-width:130px;max-width:200px">Pan left / right
+          <input id="panX" type="range" min="0" max="100" value="50">
+        </label>
+        <label style="flex:1;min-width:130px;max-width:200px">Pan up / down
+          <input id="panY" type="range" min="0" max="100" value="50">
+        </label>
+        <label>Resolution
+          <select id="phoneSize">
+            <option value="1920x1080">1080p (faster)</option>
+            <option value="3840x2160">4K (farther, slower)</option>
+            <option value="1280x720">720p</option>
+          </select>
+        </label>
+        <button id="hdBtn" class="btn small">Optimize phone</button>
+        <label class="check"><input id="autoZoom" type="checkbox"> Auto-zoom (AI)</label>
+        <span id="phoneMsg" class="muted small" style="flex-basis:100%"></span>
+      </div>
+      <div id="err" class="err"></div>
     </div>
-    <div id="phoneCtl" class="controls" style="display:none">
-      <label style="flex:1;min-width:180px;max-width:320px">Zoom <span id="zoomVal">1.0x</span>
-        <input id="zoom" type="range" min="1" max="8" step="0.1" value="1">
-      </label>
-      <label style="flex:1;min-width:140px;max-width:220px">Pan left / right
-        <input id="panX" type="range" min="0" max="100" value="50">
-      </label>
-      <label style="flex:1;min-width:140px;max-width:220px">Pan up / down
-        <input id="panY" type="range" min="0" max="100" value="50">
-      </label>
-      <label>Resolution
-        <select id="phoneSize">
-          <option value="1920x1080">1080p (faster)</option>
-          <option value="3840x2160">4K (farther, slower)</option>
-          <option value="1280x720">720p</option>
-        </select>
-      </label>
-      <button id="hdBtn" class="btn small">Optimize phone</button>
-      <label style="flex-direction:row;align-items:center;gap:8px;font-size:14px;color:var(--text)">
-        <input id="autoZoom" type="checkbox" style="width:18px;height:18px"> Auto-zoom (AI)
-      </label>
-      <span id="phoneMsg" class="muted"></span>
-    </div>
-    <div id="err" class="err"></div>
     <div class="live-grid">
-      <div class="video" id="videoBox"><span>Camera is off. Choose a camera and press Start.</span></div>
+      <div class="video" id="videoBox"><span>Camera is off.<br>Choose a camera and press <b>Start attendance</b>.</span></div>
       <div class="side">
         <div class="stats">
           <div class="stat ok"><b id="nPresent">0</b><span>Present</span></div>
           <div class="stat bad"><b id="nAbsent">0</b><span>Absent</span></div>
-          <div class="stat"><b id="nFps">-</b><span>FPS</span><span id="fpsWhy" style="display:block;font-size:10px"></span></div>
+          <div class="stat"><b id="nFps">-</b><span>FPS</span><span id="fpsWhy" style="display:block;font-size:10px;font-weight:400"></span></div>
         </div>
         <div class="card"><h3>Present</h3><div id="presentList" class="list"></div></div>
         <div class="card"><h3>Absent</h3><div id="absentList" class="list"></div></div>
@@ -144,30 +193,56 @@
     </div>
   </section>
 
-  <!-- ============================ RECORDS -->
+  <!-- ============================ SESSIONS -->
   <section id="records" class="tab">
-    <div class="records">
+    <div class="sess-grid">
       <div class="card">
-        <h3>Sessions</h3>
-        <table><thead><tr><th>Session</th><th>Present</th></tr></thead><tbody id="sessTable"></tbody></table>
-        <button id="delAllBtn" class="btn small" style="margin-top:14px;color:var(--bad);border-color:var(--bad)">Delete ALL records</button>
-      </div>
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-          <h3 id="recTitle" style="margin:0">Select a session</h3>
-          <a id="csvBtn" class="btn small" style="margin-left:auto;display:none">Download CSV</a>
-          <button id="delSessBtn" class="btn small" style="display:none;color:var(--bad);border-color:var(--bad)">Delete session</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <h2 style="flex:1">Sessions</h2>
+          <button id="newSessBtn" class="btn primary small">+ New session</button>
         </div>
-        <table>
-          <thead><tr><th></th><th>Name</th><th>Status</th><th>Time</th><th>Match</th><th>How</th><th>Telegram</th><th></th></tr></thead>
-          <tbody id="recTable"></tbody>
-        </table>
-        <div id="zoomLogWrap" style="display:none;margin-top:18px">
-          <h3>Auto-zoom log</h3>
+        <div id="sessTable"></div>
+        <button id="delAllBtn" class="btn small ghost-bad" style="margin-top:16px">Delete ALL records</button>
+      </div>
+      <div class="card" id="detailCard">
+        <div class="detail-head">
+          <div class="title"><h2 id="recTitle">Select a session</h2><div id="recSub" class="muted small"></div></div>
+          <button id="sessStartBtn" class="btn go small" style="display:none">▶ Start recording</button>
+          <button id="sessStopBtn" class="btn danger small" style="display:none">■ Stop</button>
+          <button id="sessEditBtn" class="btn small" style="display:none">Edit</button>
+          <a id="csvBtn" class="btn small" style="display:none">Download CSV</a>
+          <button id="delSessBtn" class="btn small ghost-bad" style="display:none">Delete session</button>
+        </div>
+        <div id="sessErr" class="err"></div>
+        <div id="detailBody">
+          <div class="empty">Pick a session on the left, or create a new one.</div>
+        </div>
+        <div id="detailTable" style="display:none">
+          <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat ok"><b id="dPresent">0</b><span>Present</span></div>
+            <div class="stat warn"><b id="dLate">0</b><span>Late</span></div>
+            <div class="stat bad"><b id="dAbsent">0</b><span>Absent</span></div>
+            <div class="stat"><b id="dPct">-</b><span>Attendance</span></div>
+          </div>
+          <div class="bulkbar">
+            <label class="check small"><input type="checkbox" id="selAll"> Select all</label>
+            <span id="selCount" class="muted small">0 selected</span>
+            <span style="flex:1"></span>
+            <button id="bulkAdd" class="btn small">Mark selected present</button>
+            <button id="bulkRemove" class="btn small ghost-bad">Remove selected</button>
+            <button id="allPresent" class="btn small primary">Mark everyone present</button>
+          </div>
           <table>
-            <thead><tr><th>Time</th><th>Action</th><th>Zoom</th><th>Where (x, y)</th><th>Why</th><th>Seconds</th><th>Recognised</th></tr></thead>
-            <tbody id="zoomLog"></tbody>
+            <thead><tr><th style="width:30px"></th><th>Student</th><th>Status</th><th>Time</th><th>Match</th><th>How</th><th>Telegram</th><th></th></tr></thead>
+            <tbody id="recTable"></tbody>
           </table>
+          <div id="zoomLogWrap" style="display:none;margin-top:18px">
+            <h3>Auto-zoom log</h3>
+            <table>
+              <thead><tr><th>Time</th><th>Action</th><th>Zoom</th><th>Where</th><th>Why</th><th>Sec</th><th>Recognised</th></tr></thead>
+              <tbody id="zoomLog"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -175,67 +250,137 @@
 
   <!-- ============================ STUDENTS -->
   <section id="students" class="tab">
-    <div class="card" style="margin-bottom:16px">
-      <h3>Add student</h3>
-      <div class="controls" style="margin:0">
-        <label>Full name <input id="newName" size="22" placeholder="e.g. Rahul Sharma"></label>
-        <label>Photos / videos (one person, many angles)
-          <input id="newPhotos" type="file" multiple accept="image/*,video/*">
-        </label>
-        <button id="addBtn" class="btn">Upload</button>
-        <button id="enrollBtn" class="btn primary">Re-enroll everyone</button>
+    <div class="two">
+      <div class="card">
+        <h3>Add student</h3>
+        <div class="controls">
+          <label style="flex:1">Full name <input id="newName" placeholder="e.g. Rahul Sharma"></label>
+          <label style="flex:1">Photos / videos (one person, many angles)
+            <input id="newPhotos" type="file" multiple accept="image/*,video/*">
+          </label>
+        </div>
+        <div class="controls" style="margin-top:10px">
+          <button id="addBtn" class="btn">Upload</button>
+          <button id="enrollBtn" class="btn primary">Re-enroll everyone</button>
+          <span class="muted small">After adding photos press Re-enroll (camera stopped, ~1 min).</span>
+        </div>
+        <pre id="enrollOut" style="display:none"></pre>
       </div>
-      <p class="muted" style="margin:10px 0 0">After adding or changing photos press <b>Re-enroll</b> (camera must be stopped). Takes about a minute.</p>
-      <pre id="enrollOut" style="display:none"></pre>
-    </div>
-    <div class="card" style="margin-bottom:16px">
-      <h3>Online dashboard</h3>
-      <div class="controls" style="margin:0">
-        <label>Online address <input id="cloudUrl" size="34" placeholder="https://attendance.example.com"></label>
-        <label>Sync token <input id="cloudToken" type="password" size="28" autocomplete="off" placeholder="(unchanged)"></label>
-        <button id="cloudSave" class="btn">Save &amp; sync</button>
-        <span id="cloudStatus" class="muted"></span>
+      <div class="card">
+        <h3>Logins &amp; Telegram</h3>
+        <div style="max-height:250px;overflow:auto">
+          <table>
+            <thead><tr><th>Name</th><th>Login ID</th><th>PIN</th><th>Telegram</th></tr></thead>
+            <tbody id="rosterTable"></tbody>
+          </table>
+        </div>
       </div>
-      <p class="muted" style="margin:10px 0 0">Only attendance records, roll numbers and PIN hashes go online - never photos or face data.</p>
     </div>
-    <div class="card" style="margin-bottom:16px">
-      <h3>Student notifications</h3>
-      <div class="controls" style="margin-bottom:10px">
-        <label>Telegram bot token (from @BotFather)
-          <input id="tgToken" type="password" size="40" placeholder="123456789:AA..." autocomplete="off">
-        </label>
-        <button id="tgSave" class="btn">Connect bot</button>
-        <span id="tgStatus" class="muted"></span>
+    <div id="studentGrid" class="stu-grid"></div>
+  </section>
+
+  <!-- ============================ SETTINGS -->
+  <section id="settings" class="tab">
+    <div class="two">
+      <div class="card">
+        <h3>Online dashboard</h3>
+        <div class="controls">
+          <label style="flex:1">Online address <input id="cloudUrl" placeholder="https://attendance.onrender.com"></label>
+          <label style="flex:1">Sync token <input id="cloudToken" type="password" autocomplete="off" placeholder="(unchanged)"></label>
+          <button id="cloudSave" class="btn primary">Save &amp; sync</button>
+        </div>
+        <p class="muted small" id="cloudStatus" style="margin:10px 0 0"></p>
+        <p class="muted small" style="margin:6px 0 0">Only attendance records, login IDs and PIN hashes go online - never photos or face data.</p>
       </div>
-      <p class="muted" style="margin:0 0 12px">
-        Student portal for phones on the same Wi-Fi: <b id="portalUrl"></b><br>
-        Give each student a roll no + PIN. They log in to the portal, and send
-        <code>/link &lt;roll no&gt; &lt;PIN&gt;</code> to the bot once to get a message every time they're marked.
-      </p>
-      <table>
-        <thead><tr><th>Name</th><th>Roll no</th><th>PIN</th><th>Telegram</th></tr></thead>
-        <tbody id="rosterTable"></tbody>
-      </table>
+      <div class="card">
+        <h3>Telegram alerts</h3>
+        <div class="controls">
+          <label style="flex:1">Bot token (from @BotFather)
+            <input id="tgToken" type="password" placeholder="123456789:AA..." autocomplete="off">
+          </label>
+          <button id="tgSave" class="btn primary">Connect bot</button>
+        </div>
+        <p class="muted small" id="tgStatus" style="margin:10px 0 0"></p>
+        <p class="muted small" style="margin:6px 0 0">Student portal on this Wi-Fi: <b id="portalUrl"></b><br>
+          Students send <code>/link &lt;Login ID&gt; &lt;PIN&gt;</code> to the bot once.</p>
+      </div>
     </div>
-    <div id="studentGrid" class="students"></div>
   </section>
 </main>
 
+<!-- proof -->
 <dialog id="proofDlg">
   <div class="proof">
     <img id="pFrame" alt="Full camera frame at the moment of detection">
     <div class="meta">
       <img id="pFace" alt="Detected face">
       <b id="pName" style="font-size:16px"></b>
-      <div id="pInfo" class="muted" style="overflow-wrap:anywhere"></div>
+      <div id="pInfo" class="muted small" style="overflow-wrap:anywhere"></div>
       <button class="btn" onclick="proofDlg.close()">Close</button>
     </div>
   </div>
 </dialog>
 
+<!-- new / edit session -->
+<dialog id="sessDlg">
+  <form class="form" id="sessForm" method="dialog">
+    <h2 id="sessDlgTitle">New session</h2>
+    <label>Name <input id="fName" required maxlength="60" placeholder="e.g. DL Lecture 5"></label>
+    <label>Subject / course <input id="fCourse" placeholder="e.g. Deep Learning"></label>
+    <div class="two">
+      <label>Starts <input id="fStart" type="datetime-local"></label>
+      <label>Ends <input id="fEnd" type="datetime-local"></label>
+    </div>
+    <div class="two">
+      <label>Late after (minutes) <input id="fLate" type="number" min="0" max="240" value="10"></label>
+      <label>Camera <input id="fCam" readonly placeholder="set on the Live tab"></label>
+    </div>
+    <label class="check"><input id="fAuto" type="checkbox"> Start and stop the camera automatically at these times</label>
+    <label class="check"><input id="fZoom" type="checkbox"> Use auto-zoom (phone / PTZ camera)</label>
+    <div id="fErr" class="err"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn" onclick="sessDlg.close()">Cancel</button>
+      <button type="submit" class="btn primary" id="fSave">Save session</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- student profile -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Student profile">
+  <div class="p-head">
+    <img id="prPhoto" alt="">
+    <div style="flex:1;min-width:0">
+      <h2 id="prName" style="font-size:19px"></h2>
+      <div id="prChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+    </div>
+    <button class="btn small" id="prClose">✕</button>
+  </div>
+  <div class="p-body">
+    <div style="display:flex;gap:16px;align-items:center">
+      <div class="ring" id="prRing"><span id="prPct">-</span></div>
+      <div class="kv">
+        <div><b id="prAtt">-</b><span class="muted small">Attended</span></div>
+        <div><b id="prFace">-</b><span class="muted small">By face</span></div>
+        <div><b id="prManual">-</b><span class="muted small">Manual</span></div>
+        <div><b id="prLate">-</b><span class="muted small">Late</span></div>
+        <div><b id="prMatch">-</b><span class="muted small">Avg match</span></div>
+        <div><b id="prPhotos">-</b><span class="muted small">Photos</span></div>
+      </div>
+    </div>
+    <p class="muted small" id="prLast" style="margin:12px 0 4px"></p>
+    <h3 style="margin-top:18px">Attendance history</h3>
+    <table>
+      <thead><tr><th>Session</th><th>Status</th><th>Time</th><th>How</th><th></th></tr></thead>
+      <tbody id="prHist"></tbody>
+    </table>
+  </div>
+</aside>
+
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const J = (v) => esc(JSON.stringify(v));            // safe inside an HTML attribute
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
                 set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 const api = async (url, opts = {}) => {
@@ -245,18 +390,31 @@ const api = async (url, opts = {}) => {
   return j;
 };
 const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const photo = (n) => "/student_photo/" + encodeURIComponent(n);
+const hhmm = (t) => (t || "").slice(11, 16);
+const pad = (n) => String(n).padStart(2, "0");
+const localDT = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const nice = (t) => t ? new Date(t.replace(" ", "T")).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
 
 // ---------------- tabs
-document.querySelectorAll("nav button").forEach((b) => b.onclick = () => {
-  document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("active", x === b));
-  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === b.dataset.tab));
-  if (b.dataset.tab === "records") loadSessions();
-  if (b.dataset.tab === "students") loadStudents();
+function showTab(name) {
+  document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("active", x.dataset.tab === name));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === name));
+  if (name === "records") loadSessions();
+  if (name === "students") loadStudents();
+  if (name === "settings") loadSettings();
+}
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------------- click any student -> profile
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-student]");
+  if (!el || e.target.closest("button, input, a, select")) return;
+  openProfile(el.dataset.student);
 });
 
 // ---------------- live controls
-const _d = new Date();                 // local date (toISOString would give UTC = wrong day at night in India)
-const today = `${_d.getFullYear()}-${String(_d.getMonth() + 1).padStart(2, "0")}-${String(_d.getDate()).padStart(2, "0")}`;
+const today = localDT(new Date()).slice(0, 10);
 $("session").value = today + " Lecture";
 $("camType").value = store.get("camType") || "0";
 $("camUrl").value = store.get("camUrl") || "";
@@ -265,12 +423,11 @@ const syncCam = () => {
   $("urlWrap").style.display = t === "0" ? "none" : "";
   $("phoneCtl").style.display = t === "phone" ? "" : "none";
   $("streamWrap").style.display = t === "phone" ? "" : "none";
-  $("camUrl").placeholder = t === "phone" ? "http://192.168.1.7:8080" : "rtsp://user:pass@192.168.1.20:554/stream1";
+  $("camUrl").placeholder = t === "phone" ? "192.168.1.7:8080" : "rtsp://user:pass@192.168.1.20:554/stream1";
 };
 $("camType").onchange = () => { syncCam(); readPhone(); }; syncCam();
 setTimeout(() => readPhone(), 0);
 
-// ---------------- phone zoom / HD (IP Webcam app)
 const phoneSrc = () => { try { return cameraSource(); } catch { return ""; } };
 let zoomTimer;
 const sendPtz = () => {
@@ -284,8 +441,8 @@ const sendPtz = () => {
   }, 250);
 };
 ["zoom", "panX", "panY"].forEach((id) => $(id).oninput = sendPtz);
-$("autoZoom").onchange = async () => {        // can be switched on/off during a session
-  if (!wasRunning) return;                     // not running: used when Start is pressed
+$("autoZoom").onchange = async () => {
+  if (!wasRunning) return;
   $("phoneMsg").textContent = $("autoZoom").checked ? "Starting auto-zoom..." : "Auto-zoom off";
   try { await post("/api/autozoom", { on: $("autoZoom").checked }); }
   catch (e) { $("autoZoom").checked = !$("autoZoom").checked; $("phoneMsg").textContent = e.message; }
@@ -295,7 +452,7 @@ $("hdBtn").onclick = async () => {
   try { const r = await post("/api/phone/optimize", { size: $("phoneSize").value, source: phoneSrc() }); $("phoneMsg").textContent = "Done. " + r.note; }
   catch (e) { $("phoneMsg").textContent = e.message; }
 };
-async function readPhone() {           // show the phone's current zoom / pan / resolution
+async function readPhone() {
   if ($("camType").value !== "phone" || !$("camUrl").value.trim()) return;
   try {
     const r = await post("/api/phone/status", { source: phoneSrc() });
@@ -313,37 +470,39 @@ function cameraSource() {
   let u = $("camUrl").value.trim();
   if (!u) throw new Error("Enter the camera address.");
   if (t === "phone") {
-    // accept "10.12.25.154:8080", "http://10.12.25.154:8080/video", ... -> host:port
     const host = u.replace(/^[a-z]+:\/\//i, "").split("/")[0];
-    return $("phoneStream").value === "h264"
-      ? `rtsp://${host}/h264_ulaw.sdp`        // H.264: ~2x more frames on the same Wi-Fi
-      : `http://${host}/video`;               // MJPEG: works everywhere
+    return $("phoneStream").value === "h264" ? `rtsp://${host}/h264_ulaw.sdp` : `http://${host}/video`;
   }
   return u;
 }
 
-$("startBtn").onclick = async () => {
+async function startLive(source, sessionName, sid) {
   showErr("");
+  store.set("camType", $("camType").value); store.set("camUrl", $("camUrl").value);
+  const autozoom = $("camType").value === "phone" && $("autoZoom").checked;
+  if (sid) await post(`/api/sessions/${sid}/start`, { source, autozoom });
+  else await post("/api/start", { source, session: sessionName, autozoom });
+  $("videoBox").innerHTML = `<img src="/video?t=${Date.now()}" alt="Live camera">`;
+}
+$("startBtn").onclick = async () => {
   try {
-    const source = cameraSource();
-    store.set("camType", $("camType").value); store.set("camUrl", $("camUrl").value);
     $("startBtn").disabled = true; $("startBtn").textContent = "Starting...";
-    await post("/api/start", { source, session: $("session").value,
-                               autozoom: $("camType").value === "phone" && $("autoZoom").checked });
-    $("videoBox").innerHTML = `<img src="/video?t=${Date.now()}" alt="Live camera">`;
+    const name = $("session").value.trim();
+    const known = sessions.find((s) => s.name === name && s.id && s.status !== "done");
+    await startLive(cameraSource(), name, known && known.id);
   } catch (e) { showErr(e.message); }
-  $("startBtn").textContent = "Start attendance";
+  $("startBtn").textContent = "▶ Start attendance";
   refresh();
 };
 $("stopBtn").onclick = async () => { await post("/api/stop", {}); refresh(); };
-
 function showErr(m) { $("err").textContent = m; $("err").style.display = m ? "block" : "none"; }
 
-let viewSession = null, wasRunning = false;
+let viewSession = null, wasRunning = false, lastStatus = null;
 async function refresh() {
   let s;
   try { s = await api("/api/status" + (viewSession ? "?session=" + encodeURIComponent(viewSession) : "")); }
   catch { return; }
+  lastStatus = s;
   if (s.running) viewSession = s.session;
   $("pill").textContent = s.running ? "LIVE · " + s.session : "Stopped";
   $("pill").classList.toggle("live", s.running);
@@ -352,52 +511,44 @@ async function refresh() {
   if (!s.running && wasRunning) {
     $("videoBox").innerHTML = "<span>Camera stopped.</span>";
     if (s.error) showErr(s.error);
+    if (currentRec) openSession(currentRec);
   }
-  if (s.running) showErr(s.error || "");    // e.g. "Camera lost - reconnecting..."
-  // running (maybe started from another tab / after a page reload): always show the live video
-  if (s.running && !$("videoBox").querySelector("img")) {
-    $("videoBox").innerHTML = `<img src="/video?t=${Date.now()}" alt="Live camera">`;
-  }
+  if (s.running) showErr(s.error || "");
+  if (s.running && !$("videoBox").querySelector("img")) $("videoBox").innerHTML = `<img src="/video?t=${Date.now()}" alt="Live camera">`;
+  if (s.running !== wasRunning && $("records").classList.contains("active")) loadSessions();
   wasRunning = s.running;
   $("nPresent").textContent = s.present.length;
   $("nAbsent").textContent = s.absent.length;
-  $("nFps").textContent = s.running ? s.fps : "-";
+  $("nFps").textContent = s.running ? s.fps.toFixed(1) : "-";
   const tm = s.timing || {};
-  $("nFps").title = s.running ? `per frame: wait for camera ${tm.wait ?? "-"} ms, detect ${tm.detect ?? "-"} ms, `
-    + `recognise ${tm.recognise ?? "-"} ms, video ${tm.encode ?? "-"} ms` : "";
-  $("fpsWhy").textContent = s.running && tm.detect !== undefined
-    ? `cam ${tm.wait}ms · detect ${tm.detect}ms · recog ${tm.recognise}ms` : "";
+  $("fpsWhy").textContent = s.running && tm.detect !== undefined ? `detect ${tm.detect}ms · recog ${tm.recognise}ms` : "";
   const az = s.running && s.autozoom;
   ["zoom", "panX", "panY"].forEach((id) => $(id).disabled = !!az);
   if (document.activeElement !== $("autoZoom")) $("autoZoom").checked = s.running ? !!az : $("autoZoom").checked;
   if (az) $("phoneMsg").textContent = s.autozoom_error || s.autozoom;
   const setHTML = (el, html) => { if (el._html !== html) { el._html = html; el.innerHTML = html; } };
-  setHTML($("presentList"), s.present.map((r) => presentRow(r, s.session)).join("") || '<span class="muted">Nobody yet</span>');
+  setHTML($("presentList"), s.present.map(presentRow).join("") || '<span class="muted small">Nobody yet</span>');
   setHTML($("absentList"), s.absent.map((n) => `
-    <div class="row"><img src="/student_photo/${encodeURIComponent(n)}" alt="">
-      <div class="grow">${esc(n)}</div>
-      ${s.session ? `<button class="btn small" onclick='manual(${JSON.stringify(s.session)}, ${JSON.stringify(n)}, "add")'>Mark present</button>` : ""}
-    </div>`).join("") || '<span class="muted">Everyone is present</span>');
+    <div class="row" data-student="${esc(n)}"><img class="av" src="${photo(n)}" alt="">
+      <div class="grow"><span class="name-link">${esc(n)}</span></div>
+      ${s.session ? `<button class="btn small" onclick='manual(${J(s.session)}, ${J(n)}, "add")'>Mark present</button>` : ""}
+    </div>`).join("") || '<span class="muted small">Everyone is present</span>');
   setHTML($("log"), s.events.map((e) => `<div>${esc(e.time)} · ${esc(e.text)}</div>`).join("") || "No activity yet.");
 }
-
-function presentRow(r, session) {
-  const img = r.snapshot ? `/proof/${encodeURIComponent(r.snapshot)}` : `/student_photo/${encodeURIComponent(r.name)}`;
+function presentRow(r) {
+  const img = r.snapshot ? `/proof/${encodeURIComponent(r.snapshot)}` : photo(r.name);
   const auto = (r.method || "auto") === "auto";
-  return `<div class="row"><img src="${img}" alt="">
-    <div class="grow"><div>${esc(r.name)}</div>
-      <div class="sub">${esc(r.time.slice(11))} · ${auto ? '<span class="tag">Face</span> match ' + r.similarity : '<span class="tag manual">Manual</span>'}</div></div>
-    ${auto ? `<button class="btn small" onclick='showProof(${JSON.stringify(r)})'>Proof</button>` : ""}
+  return `<div class="row" data-student="${esc(r.name)}"><img class="av" src="${img}" alt="">
+    <div class="grow"><span class="name-link">${esc(r.name)}</span>
+      <div class="sub">${esc(hhmm(r.time))} · ${auto ? '<span class="tag">Face</span> ' + r.similarity : '<span class="tag manual">Manual</span>'}${r.late ? ' <span class="tag warn">Late</span>' : ""}</div></div>
+    ${auto ? `<button class="btn small" onclick='showProof(${J(r)})'>Proof</button>` : ""}
   </div>`;
 }
-
 async function manual(session, name, action) {
-  if (action === "remove" && !confirmRemove(name)) return;
+  if (action === "remove" && !window.confirm(`Remove ${name} from "${session}"?`)) return;
   await post("/api/manual", { session, name, action });
   refresh(); if (currentRec) openSession(currentRec);
 }
-function confirmRemove(name) { return window.confirm(`Remove ${name} from this session?`); }
-
 function showProof(r) {
   $("pFrame").src = "/proof/" + encodeURIComponent(r.frame_snapshot || r.snapshot);
   $("pFace").src = "/proof/" + encodeURIComponent(r.snapshot);
@@ -406,108 +557,208 @@ function showProof(r) {
     "Session: " + esc(r.session), "Time: " + esc(r.time),
     "Match score: " + esc(r.similarity) + " (needs ≥ 0.40)",
     "Face size: " + esc(r.face_px) + " px", "Frames agreeing: " + esc(r.votes ?? "-"),
-    "Camera: " + esc(r.camera ?? "-"),
     "Zoom: " + (r.zoom && r.zoom > 1.01 ? r.zoom + "x (auto-zoom)" : "1x"),
   ].join("<br>");
   $("proofDlg").showModal();
 }
 
-// ---------------- records
+// ---------------- sessions
 function tgBadge(st) {
-  const color = { sent: "var(--ok)", failed: "var(--bad)", pending: "var(--warn)" }[st] || "var(--muted)";
-  const label = { sent: "✓ sent", failed: "✗ failed", pending: "sending…", "not linked": "not linked", "no bot": "no bot" }[st] || esc(st || "-");
-  return `<span style="color:${color};font-size:12px;font-weight:600">${label}</span>`;
+  const map = { sent: ["ok", "✓ sent"], failed: ["bad", "✗ failed"], pending: ["warn", "sending…"] };
+  const [cls, label] = map[st] || ["grey", st || "-"];
+  return `<span class="tag ${cls}">${esc(label)}</span>`;
 }
-let currentRec = null;
+const inWindow = (s) => { const n = localDT(new Date()); return s.start_at && s.end_at && s.start_at <= n && n < s.end_at; };
+const statusTag = (s) => s.status === "live" ? '<span class="tag ok">● LIVE</span>'
+  : s.status === "scheduled" && inWindow(s) ? '<span class="tag warn">Now · not recording</span>'
+  : s.status === "scheduled" ? `<span class="tag">${s.auto_start ? "⏰ " : ""}Upcoming</span>` : '<span class="tag grey">Done</span>';
+let sessions = [], currentRec = null, currentRows = [];
 async function loadSessions() {
-  const list = await api("/api/sessions");
-  $("sessTable").innerHTML = list.map((s) => `
-    <tr class="click ${s.session === currentRec ? "sel" : ""}" onclick='openSession(${JSON.stringify(s.session)})'>
-      <td>${esc(s.session)}<div class="muted" style="font-size:12px">${esc(s.started)}</div></td>
-      <td>${s.present}/${s.total}</td></tr>`).join("") || '<tr><td colspan="2" class="muted">No sessions yet</td></tr>';
+  sessions = await api("/api/sessions");
+  $("upcomingList").innerHTML = sessions.filter((s) => s.status !== "done").map((s) => `<option value="${esc(s.name)}">`).join("");
+  const groups = [["Live now", sessions.filter((s) => s.status === "live")],
+                  ["Upcoming", sessions.filter((s) => s.status === "scheduled")],
+                  ["Past", sessions.filter((s) => s.status !== "live" && s.status !== "scheduled")]];
+  $("sessTable").innerHTML = groups.filter(([, l]) => l.length).map(([title, l]) => `<div class="group-title">${title}</div>` +
+    l.map((s) => `<div class="sess-item ${s.name === currentRec ? "sel" : ""}" onclick='openSession(${J(s.name)})'>
+      <div class="grow"><b>${esc(s.name)}</b><span class="muted small">${esc(s.course || "")}${s.course ? " · " : ""}${esc(s.start_at ? nice(s.start_at.replace("T", " ")) : nice(s.started))}</span></div>
+      <div style="text-align:right">${statusTag(s)}<div class="muted small">${s.present}/${s.total}${s.late ? ` · ${s.late} late` : ""}</div></div>
+    </div>`).join("")).join("") || '<div class="empty">No sessions yet.<br>Press <b>+ New session</b>.</div>';
 }
-async function openSession(session) {
-  currentRec = session;
-  const s = await api("/api/status?session=" + encodeURIComponent(session));
-  $("recTitle").textContent = `${session} — ${s.present.length} present, ${s.absent.length} absent`;
-  $("csvBtn").href = "/api/export?session=" + encodeURIComponent(session);
-  $("csvBtn").style.display = "";
-  $("delSessBtn").style.display = "";
-  const P = s.present.map((r) => `<tr>
-      <td><img src="${r.snapshot ? "/proof/" + encodeURIComponent(r.snapshot) : "/student_photo/" + encodeURIComponent(r.name)}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" alt=""></td>
-      <td>${esc(r.name)}</td><td style="color:var(--ok)">Present</td><td>${esc(r.time.slice(11))}</td>
-      <td>${r.similarity ?? "-"}</td><td>${(r.method || "auto") === "auto" ? '<span class="tag">Face</span>' : '<span class="tag manual">Manual</span>'}</td>
+async function openSession(name) {
+  currentRec = name;
+  const meta = sessions.find((x) => x.name === name) || { name, status: "done" };
+  const s = await api("/api/status?session=" + encodeURIComponent(name));
+  currentRows = s.present;
+  const live = lastStatus && lastStatus.running && lastStatus.session === name;
+  $("recTitle").innerHTML = `${esc(name)} ${statusTag({ ...meta, status: live ? "live" : meta.status })}`;
+  const when = meta.start_at ? `${nice(meta.start_at.replace("T", " "))}${meta.end_at ? " – " + meta.end_at.slice(11) : ""}` : "";
+  $("recSub").textContent = [meta.course, when, meta.auto_start ? "auto start/stop" : "",
+                             meta.start_at ? `late after ${meta.late_after_min} min` : ""].filter(Boolean).join(" · ");
+  $("sessErr").textContent = meta.last_error || ""; $("sessErr").style.display = meta.last_error ? "block" : "none";
+  $("sessStartBtn").style.display = !live && !(lastStatus && lastStatus.running) && meta.status !== "done" ? "" : "none";
+  $("sessStopBtn").style.display = live ? "" : "none";
+  $("sessEditBtn").style.display = meta.id && meta.status === "scheduled" ? "" : "none";
+  $("csvBtn").href = "/api/export?session=" + encodeURIComponent(name); $("csvBtn").style.display = "";
+  $("delSessBtn").style.display = live ? "none" : "";
+  $("detailBody").style.display = "none"; $("detailTable").style.display = "";
+  const late = s.present.filter((r) => r.late).length, total = s.present.length + s.absent.length;
+  $("dPresent").textContent = s.present.length; $("dLate").textContent = late; $("dAbsent").textContent = s.absent.length;
+  $("dPct").textContent = total ? Math.round(100 * s.present.length / total) + "%" : "-";
+  const P = s.present.map((r) => `<tr data-student="${esc(r.name)}">
+      <td><input type="checkbox" class="sel" value="${esc(r.name)}"></td>
+      <td><div style="display:flex;gap:10px;align-items:center"><img class="av" src="${r.snapshot ? "/proof/" + encodeURIComponent(r.snapshot) : photo(r.name)}" alt=""><span class="name-link">${esc(r.name)}</span></div></td>
+      <td>${r.late ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>'}</td>
+      <td>${esc(hhmm(r.time))}</td><td>${r.similarity ?? "-"}</td>
+      <td>${(r.method || "auto") === "auto" ? '<span class="tag">Face</span>' : '<span class="tag manual">Manual</span>'}</td>
       <td>${tgBadge(r.notified)}</td>
-      <td style="white-space:nowrap">${r.snapshot ? `<button class="btn small" onclick='showProof(${JSON.stringify(r)})'>Proof</button>` : ""}
-        <button class="btn small" onclick='manual(${JSON.stringify(session)}, ${JSON.stringify(r.name)}, "remove")'>Remove</button></td></tr>`);
-  const A = s.absent.map((n) => `<tr><td></td><td>${esc(n)}</td><td style="color:var(--bad)">Absent</td><td></td><td></td><td></td><td></td>
-      <td><button class="btn small" onclick='manual(${JSON.stringify(session)}, ${JSON.stringify(n)}, "add")'>Mark present</button></td></tr>`);
-  $("recTable").innerHTML = P.concat(A).join("");
-  const zl = await api("/api/zoomlog?session=" + encodeURIComponent(session));
+      <td style="white-space:nowrap">${r.snapshot ? `<button class="btn small" onclick='showProof(${J(r)})'>Proof</button>` : ""}
+        <button class="btn small" onclick='manual(${J(name)}, ${J(r.name)}, "remove")'>Remove</button></td></tr>`);
+  const A = s.absent.map((n) => `<tr data-student="${esc(n)}">
+      <td><input type="checkbox" class="sel" value="${esc(n)}"></td>
+      <td><div style="display:flex;gap:10px;align-items:center"><img class="av" src="${photo(n)}" alt=""><span class="name-link">${esc(n)}</span></div></td>
+      <td><span class="tag bad">Absent</span></td><td></td><td></td><td></td><td></td>
+      <td><button class="btn small" onclick='manual(${J(name)}, ${J(n)}, "add")'>Mark present</button></td></tr>`);
+  $("recTable").innerHTML = P.concat(A).join("") || '<tr><td colspan="8" class="muted">No students enrolled.</td></tr>';
+  $("selAll").checked = false; updateSel();
+  const zl = await api("/api/zoomlog?session=" + encodeURIComponent(name));
   $("zoomLogWrap").style.display = zl.length ? "" : "none";
-  $("zoomLog").innerHTML = zl.map((z) => `<tr><td>${esc(z.time.slice(11))}</td><td>${esc(z.action)}</td>
-    <td>${z.zoom}x</td><td>${z.x}, ${z.y}</td><td>${esc(z.reason)}</td><td>${z.seconds}</td>
-    <td>${esc(z.recognised) || '<span class="muted">-</span>'}</td></tr>`).join("");
+  $("zoomLog").innerHTML = zl.map((z) => `<tr><td>${esc(hhmm(z.time))}</td><td>${esc(z.action)}</td><td>${z.zoom}x</td>
+    <td>${z.x}, ${z.y}</td><td>${esc(z.reason)}</td><td>${z.seconds}</td><td>${esc(z.recognised) || "-"}</td></tr>`).join("");
   loadSessions();
 }
+const selected = () => [...document.querySelectorAll("#recTable .sel:checked")].map((c) => c.value);
+function updateSel() { $("selCount").textContent = `${selected().length} selected`; }
+$("recTable").addEventListener("change", updateSel);
+$("selAll").onchange = () => { document.querySelectorAll("#recTable .sel").forEach((c) => c.checked = $("selAll").checked); updateSel(); };
+async function bulk(names, action) {
+  if (!names.length) return window.alert("Select students first.");
+  if (action === "remove" && !window.confirm(`Remove ${names.length} student(s) from "${currentRec}"?`)) return;
+  try { await post("/api/manual/bulk", { session: currentRec, names, action }); } catch (e) { window.alert(e.message); }
+  openSession(currentRec); refresh();
+}
+$("bulkAdd").onclick = () => bulk(selected(), "add");
+$("bulkRemove").onclick = () => bulk(selected(), "remove");
+$("allPresent").onclick = () => {
+  const absent = [...document.querySelectorAll("#recTable .sel")].map((c) => c.value).filter((n) => !currentRows.some((r) => r.name === n));
+  if (!absent.length) return window.alert("Everyone is already present.");
+  if (window.confirm(`Mark ${absent.length} absent student(s) present (manual)?`)) bulk(absent, "add");
+};
+$("sessStartBtn").onclick = async () => {
+  const meta = sessions.find((x) => x.name === currentRec) || {};
+  try {
+    // camera chosen on the Live tab; if that is just the webcam, prefer the one saved with the session
+    const src = ($("camType").value === "0" && meta.camera) ? meta.camera : (phoneSrc() || meta.camera || "0");
+    await startLive(src, currentRec, meta.id);
+    showTab("live");
+  } catch (e) { $("sessErr").textContent = e.message; $("sessErr").style.display = "block"; }
+  refresh();
+};
+$("sessStopBtn").onclick = async () => { await post("/api/stop", {}); await refresh(); openSession(currentRec); };
+
+let editingId = null;
+function openSessionForm(meta) {
+  editingId = meta ? meta.id : null;
+  $("sessDlgTitle").textContent = meta ? "Edit session" : "New session";
+  const start = new Date(); start.setMinutes(start.getMinutes() < 30 ? 30 : 60, 0, 0);
+  const end = new Date(start.getTime() + 60 * 60000);
+  $("fName").value = meta ? meta.name : `${localDT(start).slice(0, 10)} Lecture`;
+  $("fCourse").value = meta ? meta.course || "" : "";
+  $("fStart").value = meta ? meta.start_at || "" : localDT(start);
+  $("fEnd").value = meta ? meta.end_at || "" : localDT(end);
+  $("fLate").value = meta ? meta.late_after_min : 10;
+  $("fCam").value = meta && meta.camera ? meta.camera : phoneSrc();
+  $("fAuto").checked = meta ? !!meta.auto_start : false;
+  $("fZoom").checked = meta ? !!meta.autozoom : $("autoZoom").checked;
+  $("fErr").style.display = "none";
+  $("sessDlg").showModal();
+}
+$("newSessBtn").onclick = () => openSessionForm(null);
+$("sessEditBtn").onclick = () => openSessionForm(sessions.find((x) => x.name === currentRec));
+$("sessForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = { name: $("fName").value, course: $("fCourse").value, start_at: $("fStart").value, end_at: $("fEnd").value,
+                 late_after_min: +$("fLate").value, camera: $("fCam").value, auto_start: $("fAuto").checked, autozoom: $("fZoom").checked };
+  try {
+    const r = await post(editingId ? `/api/sessions/${editingId}` : "/api/sessions", body);
+    $("sessDlg").close();
+    await loadSessions(); openSession(r.session.name);
+  } catch (err) { $("fErr").textContent = err.message; $("fErr").style.display = "block"; }
+};
 
 async function deleteRecords(body, question) {
   if (!window.confirm(question)) return;
   try {
-    const r = await post("/api/delete", body);
-    window.alert(`Deleted ${r.records} attendance records and ${r.photos} proof photos.`);
+    const meta = sessions.find((x) => x.name === body.session);
+    let r = { records: 0, photos: 0 };
+    if (meta && meta.id && meta.present === 0 && !body.all) await api(`/api/sessions/${meta.id}`, { method: "DELETE" });
+    else r = await post("/api/delete", body);
+    window.alert(`Deleted. ${r.records} attendance records and ${r.photos} proof photos removed.`);
     currentRec = null;
-    $("recTitle").textContent = "Select a session"; $("recTable").innerHTML = "";
-    $("csvBtn").style.display = "none"; $("delSessBtn").style.display = "none";
+    $("recTitle").textContent = "Select a session"; $("recSub").textContent = "";
+    ["csvBtn", "delSessBtn", "sessStartBtn", "sessStopBtn", "sessEditBtn"].forEach((i) => $(i).style.display = "none");
+    $("detailBody").style.display = ""; $("detailTable").style.display = "none";
     loadSessions(); refresh();
   } catch (e) { window.alert("Could not delete: " + e.message); }
 }
 $("delSessBtn").onclick = () => deleteRecords({ session: currentRec },
-  `Delete ALL attendance of "${currentRec}" with its proof photos?\nThis cannot be undone. (Students and their photos are kept.)`);
+  `Delete the session "${currentRec}" and all its attendance + proof photos?\nThis cannot be undone. (Students and their photos are kept.)`);
 $("delAllBtn").onclick = () => deleteRecords({ all: true },
   "Delete EVERY attendance record of EVERY session, with all proof photos?\nThis cannot be undone. (Students and their photos are kept.)");
+
+// ---------------- student profile
+async function openProfile(name) {
+  let p;
+  try { p = await api("/api/student/" + encodeURIComponent(name)); } catch (e) { return window.alert(e.message); }
+  $("prPhoto").src = photo(name); $("prName").textContent = p.name;
+  $("prChips").innerHTML = [p.roll ? `<span class="tag">ID ${esc(p.roll)}</span>` : '<span class="tag grey">no login ID</span>',
+    p.enrolled ? '<span class="tag ok">Face enrolled</span>' : '<span class="tag warn">Not enrolled</span>',
+    p.has_pin ? '<span class="tag ok">PIN set</span>' : '<span class="tag grey">no PIN</span>',
+    p.telegram ? '<span class="tag ok">Telegram linked</span>' : '<span class="tag grey">Telegram not linked</span>'].join("");
+  const pct = p.percent ?? 0, col = pct >= 75 ? "var(--ok)" : pct >= 50 ? "var(--warn)" : "var(--bad)";
+  $("prRing").style.background = `conic-gradient(${col} ${pct * 3.6}deg, #e2e8f0 0)`;
+  $("prPct").textContent = p.percent == null ? "-" : pct + "%"; $("prPct").style.color = col;
+  $("prAtt").textContent = `${p.attended}/${p.total}`; $("prFace").textContent = p.face; $("prManual").textContent = p.manual;
+  $("prLate").textContent = p.history.filter((h) => h.late).length;
+  $("prMatch").textContent = p.avg_match ?? "-"; $("prPhotos").textContent = p.photos;
+  $("prLast").textContent = p.last_seen ? `Last marked ${nice(p.last_seen)}` : "Not marked in any session yet.";
+  $("prHist").innerHTML = p.history.map((h) => h.status === "present" ? `<tr>
+      <td>${esc(h.session)}</td><td>${h.late ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>'}</td>
+      <td>${esc(nice(h.time))}</td><td>${h.method === "auto" ? '<span class="tag">Face</span> ' + (h.similarity ?? "") : '<span class="tag manual">Manual</span>'}</td>
+      <td>${h.snapshot ? `<button class="btn small" onclick='showProof(${J(h)})'>Proof</button>` : ""}</td></tr>`
+    : `<tr><td>${esc(h.session)}</td><td><span class="tag bad">Absent</span></td><td></td><td></td><td></td></tr>`).join("")
+    || '<tr><td colspan="5" class="muted">No sessions yet.</td></tr>';
+  $("drawer").classList.add("open"); $("scrim").classList.add("open");
+}
+const closeProfile = () => { $("drawer").classList.remove("open"); $("scrim").classList.remove("open"); };
+$("prClose").onclick = closeProfile; $("scrim").onclick = closeProfile;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeProfile(); });
 
 // ---------------- students
 async function loadStudents() {
   const s = await api("/api/students");
+  let roster = [];
+  try { roster = (await api("/api/roster")).students; } catch {}
+  const rollOf = Object.fromEntries(roster.map((r) => [r.name, r.roll]));
   $("studentGrid").innerHTML = s.students.map((st) => `
-    <div class="card student"><img src="/student_photo/${encodeURIComponent(st.name)}" alt="">
-      <div style="margin-top:8px;font-weight:600">${esc(st.name)}</div>
-      <div class="muted" style="font-size:12px">${st.photos} photos · ${st.enrolled ? "enrolled" : '<span style="color:var(--warn)">not enrolled yet</span>'}</div>
-    </div>`).join("") || '<span class="muted">No students yet.</span>';
+    <div class="stu" data-student="${esc(st.name)}"><img src="${photo(st.name)}" alt="">
+      <div class="name-link" style="margin-top:10px">${esc(st.name)}</div>
+      <div class="muted small">${rollOf[st.name] ? "ID " + esc(rollOf[st.name]) + " · " : ""}${st.photos} photos</div>
+      <div style="margin-top:6px">${st.enrolled ? '<span class="tag ok">Enrolled</span>' : '<span class="tag warn">Not enrolled</span>'}</div>
+    </div>`).join("") || '<div class="empty">No students yet.</div>';
   $("enrollBtn").disabled = s.enrolling;
   if (s.enroll_output) { $("enrollOut").style.display = ""; $("enrollOut").textContent = s.enroll_output; }
   if (s.enrolling) setTimeout(loadStudents, 2000);
-  loadRoster();
+  loadRoster(roster);
 }
-
-async function loadCloud() {
-  try {
-    const c = await api("/api/cloud");
-    if (document.activeElement !== $("cloudUrl")) $("cloudUrl").value = c.url || "";
-    $("cloudStatus").textContent = c.status;
-  } catch {}
-}
-$("cloudSave").onclick = async () => {
-  $("cloudStatus").textContent = "Connecting...";
-  const body = { url: $("cloudUrl").value };
-  body.token = $("cloudToken").value;
-  try { const r = await post("/api/cloud", body); $("cloudStatus").textContent = r.status; $("cloudToken").value = ""; }
-  catch (e) { $("cloudStatus").textContent = e.message; }
-};
-
-async function loadRoster() {
-  loadCloud();
-  const r = await api("/api/roster");
-  $("tgStatus").textContent = r.telegram + (r.bot ? ` — students open t.me/${r.bot}` : "");
-  $("portalUrl").textContent = r.portal;
-  $("rosterTable").innerHTML = r.students.map((st) => `<tr>
-    <td>${esc(st.name)}</td>
-    <td><input value="${esc(st.roll)}" size="12" placeholder="e.g. 2023UCS1234"
-         onchange='saveRoll(${JSON.stringify(st.name)}, this)'></td>
-    <td><span id="pin-${esc(st.name).replace(/\W/g, "_")}">${st.has_pin ? "set" : '<span class="muted">none</span>'}</span>
-        <button class="btn small" onclick='newPin(${JSON.stringify(st.name)})'>${st.has_pin ? "Reset" : "Generate"}</button></td>
-    <td>${st.telegram ? `<span class="tag">linked</span> <button class="btn small" onclick='testMsg(${JSON.stringify(st.name)}, this)'>Test msg</button>` : '<span class="muted">not linked</span>'}</td>
+async function loadRoster(list) {
+  const students = list || (await api("/api/roster")).students;
+  $("rosterTable").innerHTML = students.map((st) => `<tr data-student="${esc(st.name)}">
+    <td><span class="name-link">${esc(st.name)}</span></td>
+    <td><input value="${esc(st.roll)}" size="9" placeholder="FA10" onchange='saveRoll(${J(st.name)}, this)'></td>
+    <td><span id="pin-${esc(st.name).replace(/\W/g, "_")}">${st.has_pin ? '<span class="tag ok">set</span>' : '<span class="tag grey">none</span>'}</span>
+        <button class="btn small" onclick='newPin(${J(st.name)})'>${st.has_pin ? "Reset" : "Generate"}</button></td>
+    <td>${st.telegram ? `<span class="tag ok">linked</span> <button class="btn small" onclick='testMsg(${J(st.name)}, this)'>Test</button>` : '<span class="tag grey">not linked</span>'}</td>
   </tr>`).join("");
 }
 async function testMsg(name, btn) {
@@ -520,33 +771,54 @@ async function saveRoll(name, input) {
   catch (e) { input.style.borderColor = "var(--bad)"; alertBox(e.message); }
 }
 async function newPin(name) {
+  if (!window.confirm(`Make a new PIN for ${name}? The old PIN stops working.`)) return;
   const r = await post("/api/roster/pin", { name });
   const cell = document.getElementById("pin-" + name.replace(/\W/g, "_"));
-  cell.innerHTML = `<b style="font-size:16px;letter-spacing:.1em">${esc(r.pin)}</b> <span class="muted">(note it now — shown once)</span>`;
+  cell.innerHTML = `<b style="font-size:15px;letter-spacing:.1em">${esc(r.pin)}</b> <span class="muted small">(note it now - shown once)</span>`;
 }
 function alertBox(m) { $("enrollOut").style.display = ""; $("enrollOut").textContent = m; }
-$("tgSave").onclick = async () => {
-  $("tgStatus").textContent = "Checking...";
-  try { const r = await post("/api/telegram", { token: $("tgToken").value }); $("tgToken").value = ""; $("tgStatus").textContent = r.status; loadRoster(); }
-  catch (e) { $("tgStatus").textContent = e.message; }
-};
 $("addBtn").onclick = async () => {
   const fd = new FormData();
   fd.append("name", $("newName").value);
   for (const f of $("newPhotos").files) fd.append("photos", f);
   try {
     const r = await api("/api/students", { method: "POST", body: fd });
-    $("enrollOut").style.display = ""; $("enrollOut").textContent = `Saved ${r.saved} files. Now press Re-enroll.`;
+    alertBox(`Saved ${r.saved} files. Now press Re-enroll.`);
     $("newName").value = ""; $("newPhotos").value = ""; loadStudents();
-  } catch (e) { $("enrollOut").style.display = ""; $("enrollOut").textContent = "Error: " + e.message; }
+  } catch (e) { alertBox("Error: " + e.message); }
 };
 $("enrollBtn").onclick = async () => {
-  try { await post("/api/enroll", {}); loadStudents(); }
-  catch (e) { $("enrollOut").style.display = ""; $("enrollOut").textContent = "Error: " + e.message; }
+  try { await post("/api/enroll", {}); loadStudents(); } catch (e) { alertBox("Error: " + e.message); }
 };
 
+// ---------------- settings
+async function loadSettings() {
+  try {
+    const c = await api("/api/cloud");
+    if (document.activeElement !== $("cloudUrl")) $("cloudUrl").value = c.url || "";
+    $("cloudStatus").textContent = c.status;
+  } catch {}
+  try {
+    const r = await api("/api/roster");
+    $("tgStatus").textContent = r.telegram + (r.bot ? ` - students open t.me/${r.bot}` : "");
+    $("portalUrl").textContent = r.portal;
+  } catch {}
+}
+$("cloudSave").onclick = async () => {
+  $("cloudStatus").textContent = "Connecting...";
+  try { const r = await post("/api/cloud", { url: $("cloudUrl").value, token: $("cloudToken").value }); $("cloudStatus").textContent = r.status; $("cloudToken").value = ""; }
+  catch (e) { $("cloudStatus").textContent = e.message; }
+};
+$("tgSave").onclick = async () => {
+  $("tgStatus").textContent = "Checking...";
+  try { const r = await post("/api/telegram", { token: $("tgToken").value }); $("tgToken").value = ""; $("tgStatus").textContent = r.status; }
+  catch (e) { $("tgStatus").textContent = e.message; }
+};
+
+loadSessions().catch(() => {});
 refresh();
 setInterval(refresh, 1500);
+setInterval(() => { if ($("records").classList.contains("active")) loadSessions().catch(() => {}); }, 10000);
 </script>
 </body>
 </html>
