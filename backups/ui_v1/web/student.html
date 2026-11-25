@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Attendance</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%2316a34a'/%3E%3C/svg%3E">
+<style>
+  :root { --bg: #f4f5f7; --card: #fff; --text: #1d2330; --muted: #6b7280; --line: #e5e7eb; --accent: #2563eb; --ok: #16a34a; --ok-bg: #dcfce7; --warn: #d97706; --bad: #dc2626; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 20px 16px 40px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  h1 { font-size: 20px; margin: 0 0 4px; } .muted { color: var(--muted); font-size: 13px; }
+  input { width: 100%; font: inherit; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; margin-top: 6px; }
+  label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
+  button { font: inherit; font-weight: 600; padding: 11px 16px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; width: 100%; cursor: pointer; }
+  button.ghost { background: none; color: var(--muted); width: auto; padding: 6px 10px; border: 1px solid var(--line); font-size: 13px; }
+  .err { color: var(--bad); font-size: 13px; min-height: 18px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .stat b { display: block; font-size: 24px; } .stat span { font-size: 12px; color: var(--muted); }
+  .rec { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .rec:last-child { border: 0; }
+  .rec img { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: #e5e7eb; flex: none; }
+  .rec .grow { flex: 1; min-width: 0; }
+  .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: #eef2ff; color: var(--accent); font-weight: 600; }
+  .tag.manual { background: #fef3c7; color: var(--warn); }
+  .banner { display: none; background: var(--ok-bg); color: var(--ok); border: 1px solid #86efac; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; font-weight: 600; }
+  .head { display: flex; align-items: start; gap: 10px; } .head > div { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="loginView" class="card" style="display:none">
+    <h1>My Attendance</h1>
+    <p class="muted">Log in with the roll number and PIN your teacher gave you.</p>
+    <form id="loginForm">
+      <label>Roll number <input id="roll" autocomplete="username" autocapitalize="characters" required></label>
+      <label>PIN <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+      <div id="loginErr" class="err"></div>
+      <button type="submit">Log in</button>
+    </form>
+  </div>
+
+  <div id="meView" style="display:none">
+    <div id="banner" class="banner"></div>
+    <div class="card">
+      <div class="head">
+        <div><h1 id="meName"></h1><div class="muted" id="meRoll"></div></div>
+        <button class="ghost" id="logout">Log out</button>
+      </div>
+    </div>
+    <div class="card stats">
+      <div class="stat"><b id="sAtt">0</b><span>Classes attended</span></div>
+      <div class="stat"><b id="sTot">0</b><span>Total classes</span></div>
+      <div class="stat"><b id="sPct">-</b><span>Attendance</span></div>
+    </div>
+    <div class="card">
+      <h1 style="font-size:16px;margin-bottom:6px">History</h1>
+      <div id="recs"></div>
+    </div>
+    <p class="muted" style="text-align:center">This page updates by itself. Keep it open to see when you're marked.</p>
+  </div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let known = null, lastSig = "";
+
+async function load() {
+  const r = await fetch("/api/me");
+  if (r.status === 401) { $("loginView").style.display = ""; $("meView").style.display = "none"; return; }
+  const d = await r.json();
+  $("loginView").style.display = "none"; $("meView").style.display = "";
+  $("meName").textContent = d.name; $("meRoll").textContent = d.roll ? "Roll no " + d.roll : "";
+  $("sAtt").textContent = d.attended; $("sTot").textContent = d.total_sessions;
+  $("sPct").textContent = d.total_sessions ? Math.round(100 * d.attended / d.total_sessions) + "%" : "-";
+  const keys = d.records.map((h) => h.session + "|" + h.time);
+  if (known) {
+    const fresh = d.records.filter((h) => !known.has(h.session + "|" + h.time));
+    if (fresh.length) {
+      const h = fresh[0];
+      $("banner").textContent = `✅ Your attendance for "${h.session}" is marked ` +
+        (h.method === "auto" ? "through Face recognition" : "by your teacher") + ` at ${h.time.slice(11, 16)}`;
+      $("banner").style.display = "block";
+      if (navigator.vibrate) navigator.vibrate(200);
+    }
+  }
+  known = new Set(keys);
+  const sig = JSON.stringify(d.records);
+  if (sig === lastSig) return;          // nothing changed: don't redraw (avoids image flicker)
+  lastSig = sig;
+  $("recs").innerHTML = d.records.map((h) => `
+    <div class="rec">
+      ${h.snapshot ? `<img src="/myface/${encodeURIComponent(h.snapshot)}" alt="">` : `<img alt="">`}
+      <div class="grow"><div>${esc(h.session)}</div>
+        <div class="muted">${esc(h.time)}</div></div>
+      ${h.method === "auto" ? '<span class="tag">Face</span>' : '<span class="tag manual">Manual</span>'}
+    </div>`).join("") || '<p class="muted">No attendance yet.</p>';
+}
+
+$("loginForm").onsubmit = async (e) => {
+  e.preventDefault(); $("loginErr").textContent = "";
+  const r = await fetch("/login", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ roll: $("roll").value, pin: $("pin").value }) });
+  if (!r.ok) { $("loginErr").textContent = (await r.json().catch(() => ({}))).error || "Login failed"; return; }
+  $("pin").value = ""; known = null; lastSig = ""; load();
+};
+$("logout").onclick = async () => { await fetch("/logout", { method: "POST" }); known = null; lastSig = ""; load(); };
+
+load();
+setInterval(() => { if ($("meView").style.display !== "none") load(); }, 5000);
+</script>
+</body>
+</html>

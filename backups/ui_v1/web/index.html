@@ -1,0 +1,1173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Face Attendance</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%234f46e5'/%3E%3Ccircle cx='8' cy='6.5' r='2.6' fill='white'/%3E%3Cpath d='M3.5 13c.8-2.3 2.5-3.4 4.5-3.4s3.7 1.1 4.5 3.4' fill='white'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #f5f6fa; --surface: #fff; --soft: #f8fafc; --text: #0f172a; --muted: #64748b; --line: #e2e8f0;
+    --accent: #4f46e5; --accent-soft: #eef2ff; --ok: #059669; --ok-soft: #d1fae5; --bad: #dc2626; --bad-soft: #fee2e2;
+    --warn: #d97706; --warn-soft: #fef3c7; --radius: 14px; --shadow: 0 1px 2px rgba(15,23,42,.04), 0 4px 16px rgba(15,23,42,.05);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  button, input, select { font: inherit; }
+  header { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 22px; padding: 10px 22px;
+           background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; white-space: nowrap; }
+  .brand i { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #6366f1, #4338ca); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 15px; }
+  nav { display: flex; gap: 2px; background: var(--soft); border: 1px solid var(--line); padding: 3px; border-radius: 11px; }
+  nav { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  nav button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; color: var(--muted); cursor: pointer; font-weight: 600; white-space: nowrap; flex: none; }
+  nav button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
+  .pill { margin-left: auto; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #e2e8f0; color: var(--muted); white-space: nowrap; }
+  .pill.live { background: var(--ok-soft); color: var(--ok); }
+  .pill.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); margin-right: 6px; animation: blink 1.4s infinite; }
+  @keyframes blink { 50% { opacity: .3; } }
+  main { padding: 20px 22px 40px; max-width: 1440px; margin: 0 auto; }
+  .tab { display: none; } .tab.active { display: block; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 14px; }
+  .two > .card, .sess-grid > .card { margin-top: 0; }
+  h2 { font-size: 15px; margin: 0; } h3 { font-size: 12px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .muted { color: var(--muted); } .small { font-size: 12px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); font-weight: 600; }
+  input, select { padding: 8px 11px; border: 1px solid var(--line); border-radius: 9px; background: #fff; color: var(--text); min-width: 0; }
+  input:focus, select:focus { outline: 2px solid #c7d2fe; border-color: var(--accent); }
+  input[type=checkbox] { width: 17px; height: 17px; accent-color: var(--accent); }
+  .check { flex-direction: row; align-items: center; gap: 8px; font-size: 14px; color: var(--text); font-weight: 500; }
+  .btn { font-weight: 600; padding: 8px 15px; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--text); cursor: pointer; white-space: nowrap; }
+  .btn:hover { background: var(--soft); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); } .btn.primary:hover { background: #4338ca; }
+  .btn.go { background: var(--ok); color: #fff; border-color: var(--ok); }
+  .btn.danger { background: var(--bad); color: #fff; border-color: var(--bad); }
+  .btn.ghost-bad { color: var(--bad); border-color: #fecaca; }
+  .btn.small { padding: 4px 10px; font-size: 12px; border-radius: 7px; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .err { background: var(--bad-soft); color: var(--bad); padding: 9px 13px; border-radius: 10px; margin: 12px 0 0; display: none; font-weight: 600; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .tag.ok { background: var(--ok-soft); color: var(--ok); } .tag.bad { background: var(--bad-soft); color: var(--bad); }
+  .tag.warn, .tag.manual { background: var(--warn-soft); color: var(--warn); } .tag.grey { background: #f1f5f9; color: var(--muted); }
+  .av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #e2e8f0; flex: none; }
+  [data-student] { cursor: pointer; } .name-link { font-weight: 600; } [data-student]:hover .name-link { color: var(--accent); text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+  tbody tr:hover { background: var(--soft); }
+  /* live */
+  .live-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; margin-top: 16px; }
+  .video { background: #0b1020; border-radius: var(--radius); aspect-ratio: 16/9; display: grid; place-items: center; overflow: hidden; color: #94a3b8; text-align: center; padding: 20px; }
+  .video img { width: 100%; height: 100%; object-fit: contain; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; box-shadow: var(--shadow); }
+  .stat b { display: block; font-size: 26px; line-height: 1.15; } .stat span { color: var(--muted); font-size: 12px; font-weight: 600; }
+  .stat.ok b { color: var(--ok); } .stat.bad b { color: var(--bad); } .stat.warn b { color: var(--warn); }
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .side .card + .card { margin-top: 0; }
+  .list { display: flex; flex-direction: column; gap: 4px; max-height: 280px; overflow: auto; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; }
+  .row:hover { background: var(--soft); }
+  .row .grow { flex: 1; min-width: 0; } .row .sub { color: var(--muted); font-size: 12px; }
+  .log { font-size: 12px; color: var(--muted); max-height: 150px; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
+  #phoneCtl { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  /* sessions */
+  .sess-grid { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 16px; }
+  .sess-item { display: flex; gap: 10px; align-items: center; padding: 10px; border-radius: 11px; cursor: pointer; border: 1px solid transparent; }
+  .sess-item:hover { background: var(--soft); } .sess-item.sel { background: var(--accent-soft); border-color: #c7d2fe; }
+  .sess-item .grow { flex: 1; min-width: 0; } .sess-item b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 12px 4px 4px; }
+  .detail-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .detail-head .title { flex: 1; min-width: 200px; }
+  .bulkbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; background: var(--soft); border-radius: 10px; margin: 12px 0 6px; }
+  .empty { text-align: center; padding: 40px 10px; color: var(--muted); }
+  /* students */
+  .stu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 14px; }
+  .stu { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; text-align: center; box-shadow: var(--shadow); transition: transform .12s; }
+  .stu:hover { transform: translateY(-2px); border-color: #c7d2fe; }
+  .stu img { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  pre { background: var(--soft); padding: 10px; border-radius: 10px; white-space: pre-wrap; font-size: 12px; max-height: 260px; overflow: auto; margin: 12px 0 0; }
+  /* dialogs + drawer */
+  dialog { border: 0; border-radius: 16px; padding: 0; max-width: min(980px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  dialog::backdrop { background: rgba(15,23,42,.55); }
+  .proof { display: grid; grid-template-columns: minmax(0, 1fr) 230px; }
+  .proof > img { width: 100%; display: block; background: #000; }
+  .proof .meta { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .proof .meta img { width: 100%; border-radius: 10px; }
+  .form { padding: 20px; width: min(520px, 92vw); display: flex; flex-direction: column; gap: 12px; }
+  .form .two { gap: 10px; }
+  .scrim { position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 30; display: none; }
+  .drawer { position: fixed; top: 0; right: 0; height: 100%; width: min(560px, 100vw); background: var(--surface); z-index: 31;
+            box-shadow: -10px 0 40px rgba(15,23,42,.18); transform: translateX(100%); transition: transform .2s ease; overflow: auto; }
+  .drawer.open { transform: none; } .scrim.open { display: block; }
+  .p-head { display: flex; gap: 14px; align-items: center; padding: 20px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+  .p-head img { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
+  .ring { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+  .ring span { width: 74px; height: 74px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 20px; font-weight: 800; }
+  .p-body { padding: 18px 20px 30px; }
+  .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
+  .kv div { background: var(--soft); border-radius: 10px; padding: 9px 10px; } .kv b { display: block; font-size: 17px; }
+  /* live page polish */
+  .video-wrap { position: relative; }
+  .video-bar { position: absolute; top: 12px; left: 12px; right: 12px; display: none; gap: 8px; align-items: center; flex-wrap: wrap; z-index: 2; }
+  .video-bar span { background: rgba(15,23,42,.72); color: #fff; font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 99px; backdrop-filter: blur(4px); }
+  .video-bar .rec { background: #dc2626; } .video-bar .rec::before { content: "● "; animation: blink 1.4s infinite; }
+  .empty-cam { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .empty-cam .icon { width: 64px; height: 64px; border-radius: 18px; background: rgba(99,102,241,.18); display: grid; place-items: center; font-size: 30px; }
+  .empty-cam ol { margin: 0; padding: 0; list-style: none; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .empty-cam li { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); padding: 6px 12px; border-radius: 99px; font-size: 12.5px; color: #cbd5e1; }
+  .empty-cam li b { color: #a5b4fc; margin-right: 4px; }
+  .progress { height: 8px; border-radius: 99px; background: #e2e8f0; overflow: hidden; }
+  .progress i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #10b981, #059669); transition: width .4s; }
+  .att-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+  .att-card .big { font-size: 30px; font-weight: 800; color: var(--ok); line-height: 1; }
+  .att-card .of { color: var(--muted); font-weight: 600; }
+  .mini-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .mini-stats div { background: var(--soft); border-radius: 10px; padding: 8px 10px; }
+  .mini-stats b { display: block; font-size: 18px; } .mini-stats span { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .log div { position: relative; padding-left: 14px; }
+  .log div::before { content: ""; position: absolute; left: 2px; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+  .count { float: right; font-size: 11px; background: var(--soft); border-radius: 99px; padding: 1px 8px; color: var(--muted); letter-spacing: 0; }
+  /* sessions polish */
+  .sess-item { border-left: 3px solid transparent; }
+  .sess-item.st-live { border-left-color: var(--ok); background: #f0fdf4; }
+  .sess-item.st-scheduled { border-left-color: #818cf8; }
+  .sess-item.st-done { border-left-color: #cbd5e1; }
+  .sess-item .progress { height: 4px; margin-top: 6px; }
+  .detail-progress { margin: 12px 0 4px; display: flex; align-items: center; gap: 10px; }
+  .detail-progress .progress { flex: 1; height: 10px; }
+  #recTable tr:nth-child(even) { background: #fbfcfe; }
+  thead th { position: sticky; top: 0; background: var(--surface); z-index: 1; }
+  /* classroom coverage */
+  .cov { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: var(--soft); }
+  .cov-head { display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap; }
+  .cov-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; }
+  .regions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .region { border-radius: 10px; padding: 8px 9px; font-size: 11.5px; border: 1px solid var(--line); background: #fff; }
+  .region b { display: block; font-size: 12px; }
+  .region.completed { background: var(--ok-soft); border-color: #a7f3d0; }
+  .region.needs_review { background: var(--warn-soft); border-color: #fcd34d; }
+  .region.not_inspected { background: #f1f5f9; color: var(--muted); }
+  .unres { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+  .uface { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; gap: 10px; }
+  .uface img { width: 64px; height: 64px; border-radius: 10px; object-fit: cover; background: #e2e8f0; flex: none; }
+  .uface .grow { flex: 1; min-width: 0; font-size: 12px; }
+  .uface select { width: 100%; padding: 4px 6px; font-size: 12px; margin: 4px 0; }
+  .live-class { margin-top: 10px; font-size: 12.5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  /* architecture page */
+  .arch-hero { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+  .arch-hero h1 { font-size: 24px; margin: 0 0 4px; }
+  .flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 6px 2px 10px; }
+  .node { flex: 1 1 0; min-width: 132px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+          box-shadow: var(--shadow); position: relative; }
+  .node .k { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .node b { display: block; font-size: 14px; margin: 3px 0 4px; }
+  .node p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .node p b { display: inline; font-size: inherit; margin: 0; color: var(--text); }
+  .node.cam { border-top: 3px solid #0ea5e9; } .node.ai { border-top: 3px solid var(--accent); } .node.out { border-top: 3px solid var(--ok); }
+  .arrow { flex: 0 0 26px; display: grid; place-items: center; color: #94a3b8; font-size: 18px; }
+  .loop { margin: 4px 0 0; padding: 12px 14px; border: 2px dashed #c7d2fe; border-radius: 12px; background: var(--accent-soft);
+          display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .loop b { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--soft); border: 1px solid var(--line); font-weight: 600; }
+  .outs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+  .metric b { display: block; font-size: 26px; line-height: 1.1; color: var(--accent); }
+  .metric span { font-size: 12px; color: var(--muted); }
+  .deep { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .deep .node p { font-size: 12.5px; }
+  .timeline { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; position: relative; }
+  .timeline > div { background: var(--soft); border-radius: 12px; padding: 12px; border-left: 3px solid var(--accent); }
+  .timeline b { display: block; color: var(--accent); font-size: 13px; margin-bottom: 4px; }
+  .timeline span { font-size: 12.5px; color: var(--muted); }
+  .privacy { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .privacy ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .states { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+  .states span.s { padding: 3px 9px; border-radius: 7px; background: #fff; border: 1px solid #c7d2fe; font-weight: 700; color: var(--accent); }
+  @media (max-width: 1000px) {
+    .flow { flex-direction: column; } .arrow { transform: rotate(90deg); height: 22px; }
+    .outs, .privacy, .deep, .timeline { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 1000px) {
+    .live-grid, .sess-grid, .two, .proof, .cov-grid { grid-template-columns: 1fr; }
+    header { flex-wrap: wrap; gap: 10px; padding: 10px 14px; } main { padding: 14px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><i>☺</i> Face Attendance</div>
+  <nav>
+    <button data-tab="live" class="active">Live</button>
+    <button data-tab="records">Sessions</button>
+    <button data-tab="students">Students</button>
+    <button data-tab="settings">Settings</button>
+    <button data-tab="arch">How it works</button>
+  </nav>
+  <span id="pill" class="pill">Stopped</span>
+</header>
+
+<main>
+  <!-- ============================ LIVE -->
+  <section id="live" class="tab active">
+    <div class="card">
+      <div class="controls">
+        <label style="flex:1;min-width:200px">Session / lecture
+          <input id="session" list="upcomingList" placeholder="e.g. DL Lecture 5">
+          <datalist id="upcomingList"></datalist>
+        </label>
+        <label>Camera
+          <select id="camType">
+            <option value="0">Laptop webcam</option>
+            <option value="phone">Phone (IP Webcam app)</option>
+            <option value="custom">CCTV / custom URL</option>
+          </select>
+        </label>
+        <label id="urlWrap" style="display:none">Address
+          <input id="camUrl" size="24" placeholder="http://192.168.1.7:8080">
+        </label>
+        <label id="streamWrap" style="display:none">Stream
+          <select id="phoneStream">
+            <option value="h264">H.264 (faster)</option>
+            <option value="mjpeg">MJPEG (if H.264 fails)</option>
+          </select>
+        </label>
+        <button id="startBtn" class="btn go">▶ Start attendance</button>
+        <button id="stopBtn" class="btn danger" disabled>■ Stop</button>
+        <button id="resetBtn" class="btn ghost-bad" title="Clear all captured attendance to start the demo again">↺ Reset demo</button>
+      </div>
+      <div id="phoneCtl" class="controls" style="display:none">
+        <label style="flex:1;min-width:170px;max-width:300px">Zoom <span id="zoomVal">1.0x</span>
+          <input id="zoom" type="range" min="1" max="8" step="0.1" value="1">
+        </label>
+        <label style="flex:1;min-width:130px;max-width:200px">Pan left / right
+          <input id="panX" type="range" min="0" max="100" value="50">
+        </label>
+        <label style="flex:1;min-width:130px;max-width:200px">Pan up / down
+          <input id="panY" type="range" min="0" max="100" value="50">
+        </label>
+        <label>Resolution
+          <select id="phoneSize">
+            <option value="1920x1080">1080p (faster)</option>
+            <option value="3840x2160">4K (farther, slower)</option>
+            <option value="1280x720">720p</option>
+          </select>
+        </label>
+        <button id="hdBtn" class="btn small">Optimize phone</button>
+        <label class="check"><input id="autoZoom" type="checkbox"> Auto-zoom (AI)</label>
+        <span id="phoneMsg" class="muted small" style="flex-basis:100%"></span>
+      </div>
+      <div id="nextSess" class="muted small" style="margin-top:10px;display:none"></div>
+      <div id="liveClass" class="live-class" style="display:none"></div>
+      <div id="err" class="err"></div>
+    </div>
+    <div class="live-grid">
+      <div class="video-wrap">
+        <div class="video-bar" id="videoBar">
+          <span class="rec">LIVE</span><span id="vbSession"></span><span id="vbCam"></span><span id="vbFps"></span>
+        </div>
+        <div class="video" id="videoBox"></div>
+      </div>
+      <div class="side">
+        <div class="att-card">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:8px">
+            <span class="big" id="nPresent">0</span><span class="of">/ <span id="nTotal">0</span> present</span>
+            <span style="flex:1"></span><span class="tag" id="nPct">0%</span>
+          </div>
+          <div class="progress"><i id="liveBar" style="width:0%"></i></div>
+          <div class="mini-stats">
+            <div><b id="nAbsent" style="color:var(--bad)">0</b><span>Not yet verified</span></div>
+            <div><b id="nFps">-</b><span>FPS</span><span id="fpsWhy" style="display:block;font-size:10px;font-weight:400"></span></div>
+          </div>
+        </div>
+        <div class="card"><h3>Present <span class="count" id="cPresent">0</span></h3><div id="presentList" class="list"></div></div>
+        <div class="card"><h3>Absent <span class="count" id="cAbsent">0</span></h3><div id="absentList" class="list"></div></div>
+        <div class="card"><h3>Activity</h3><div id="log" class="log"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ SESSIONS -->
+  <section id="records" class="tab">
+    <div class="sess-grid">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:8px">
+          <h2 style="flex:1">Sessions</h2>
+          <button id="newSessBtn" class="btn primary small">+ New session</button>
+        </div>
+        <div id="sessTable"></div>
+        <button id="delAllBtn" class="btn small ghost-bad" style="margin-top:16px">Delete ALL records</button>
+      </div>
+      <div class="card" id="detailCard">
+        <div class="detail-head">
+          <div class="title"><h2 id="recTitle">Select a session</h2><div id="recSub" class="muted small"></div></div>
+          <button id="sessStartBtn" class="btn go small" style="display:none">▶ Start recording</button>
+          <button id="sessStopBtn" class="btn danger small" style="display:none">■ Stop</button>
+          <button id="sessEditBtn" class="btn small" style="display:none">Edit</button>
+          <a id="csvBtn" class="btn small" style="display:none">Download CSV</a>
+          <button id="delSessBtn" class="btn small ghost-bad" style="display:none">Delete session</button>
+        </div>
+        <div id="sessErr" class="err"></div>
+        <div id="detailBody">
+          <div class="empty">Pick a session on the left, or create a new one.</div>
+        </div>
+        <div id="detailTable" style="display:none">
+          <div class="detail-progress"><span class="muted small">Attendance</span><div class="progress"><i id="dBar" style="width:0%"></i></div></div>
+          <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat ok"><b id="dPresent">0</b><span>Present (incl. late)</span></div>
+            <div class="stat warn"><b id="dLate">0</b><span>of them late</span></div>
+            <div class="stat bad"><b id="dAbsent">0</b><span>Absent</span></div>
+            <div class="stat"><b id="dPct">-</b><span>Attendance</span></div>
+          </div>
+          <div id="covCard" class="cov" style="display:none">
+            <div class="cov-head">
+              <div><b id="covHeadline" style="font-size:16px"></b><div class="muted small" id="covSub"></div></div>
+              <span id="covVerdict" class="tag"></span>
+            </div>
+            <div class="cov-grid">
+              <div><h3 style="margin-top:12px">Classroom regions <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">- seen from the camera, back row on top</span></h3>
+                <div id="covMap" class="regions"></div></div>
+              <div><h3 style="margin-top:12px">Not yet verified</h3><div id="covMissing" class="chips"></div></div>
+            </div>
+            <div id="unresWrap" style="display:none">
+              <h3 style="margin-top:14px">Unresolved faces <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">- seen but not recognised; verify or ignore</span></h3>
+              <div id="unresList" class="unres"></div>
+            </div>
+          </div>
+          <div class="bulkbar">
+            <label class="check small"><input type="checkbox" id="selAll"> Select all</label>
+            <span id="selCount" class="muted small">0 selected</span>
+            <span style="flex:1"></span>
+            <button id="bulkAdd" class="btn small">Mark selected present</button>
+            <button id="bulkRemove" class="btn small ghost-bad">Remove selected</button>
+            <button id="allPresent" class="btn small primary">Mark everyone present</button>
+          </div>
+          <table>
+            <thead><tr><th style="width:30px"></th><th>Student</th><th>Status</th><th>Time</th><th>Match</th><th>How</th><th>Telegram</th><th></th></tr></thead>
+            <tbody id="recTable"></tbody>
+          </table>
+          <div id="zoomLogWrap" style="display:none;margin-top:18px">
+            <h3>Auto-zoom log</h3>
+            <table>
+              <thead><tr><th>Time</th><th>Action</th><th>Zoom</th><th>Where</th><th>Why</th><th>Sec</th><th>Recognised</th></tr></thead>
+              <tbody id="zoomLog"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ STUDENTS -->
+  <section id="students" class="tab">
+    <div class="two">
+      <div class="card">
+        <h3>Add student</h3>
+        <div class="controls">
+          <label style="flex:1">Full name <input id="newName" placeholder="e.g. Rahul Sharma"></label>
+          <label style="flex:1">Photos / videos (one person, many angles)
+            <input id="newPhotos" type="file" multiple accept="image/*,video/*">
+          </label>
+        </div>
+        <div class="controls" style="margin-top:10px">
+          <button id="addBtn" class="btn">Upload</button>
+          <button id="enrollBtn" class="btn primary">Re-enroll everyone</button>
+          <span class="muted small">After adding photos press Re-enroll (camera stopped, ~1 min).</span>
+        </div>
+        <pre id="enrollOut" style="display:none"></pre>
+      </div>
+      <div class="card">
+        <h3>Logins &amp; Telegram</h3>
+        <div style="max-height:250px;overflow:auto">
+          <table>
+            <thead><tr><th>Name</th><th>Login ID</th><th>PIN</th><th>Telegram</th></tr></thead>
+            <tbody id="rosterTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div id="studentGrid" class="stu-grid"></div>
+  </section>
+
+  <!-- ============================ SETTINGS -->
+  <section id="settings" class="tab">
+    <div class="two">
+      <div class="card">
+        <h3>Online dashboard</h3>
+        <div class="controls">
+          <label style="flex:1">Online address <input id="cloudUrl" placeholder="https://attendance.onrender.com"></label>
+          <label style="flex:1">Sync token <input id="cloudToken" type="password" autocomplete="off" placeholder="(unchanged)"></label>
+          <button id="cloudSave" class="btn primary">Save &amp; sync</button>
+        </div>
+        <p class="muted small" id="cloudStatus" style="margin:10px 0 0"></p>
+        <p class="muted small" style="margin:6px 0 0">Only attendance records, login IDs and PIN hashes go online - never photos or face data.</p>
+      </div>
+      <div class="card">
+        <h3>Telegram alerts</h3>
+        <div class="controls">
+          <label style="flex:1">Bot token (from @BotFather)
+            <input id="tgToken" type="password" placeholder="123456789:AA..." autocomplete="off">
+          </label>
+          <button id="tgSave" class="btn primary">Connect bot</button>
+        </div>
+        <p class="muted small" id="tgStatus" style="margin:10px 0 0"></p>
+        <p class="muted small" style="margin:6px 0 0">Student portal on this Wi-Fi: <b id="portalUrl"></b><br>
+          Students send <code>/link &lt;Login ID&gt; &lt;PIN&gt;</code> to the bot once.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Demo tools</h3>
+      <div class="controls" style="align-items:center">
+        <button id="resetBtn2" class="btn danger">↺ Reset demo data</button>
+        <span class="muted small" style="flex:1;min-width:260px">Deletes all captured data - attendance, sessions, proof photos,
+          Telegram log, zoom log - so the demo starts clean. <b>Kept:</b> students, their photos, face enrolment, login IDs, PINs, Telegram links.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ ARCHITECTURE -->
+  <section id="arch" class="tab">
+    <div class="card arch-hero">
+      <div>
+        <h1>Long-Range Face Attendance</h1>
+        <div class="muted">One CCTV or phone camera marks the whole classroom from a distance - no queues, no ID cards, no roll call.</div>
+      </div>
+      <div class="chips">
+        <span class="chip">Python</span><span class="chip">InsightFace SCRFD + ArcFace</span><span class="chip">ONNX Runtime (CPU)</span>
+        <span class="chip">OpenCV</span><span class="chip">Flask</span><span class="chip">SQLite</span><span class="chip">Telegram Bot API</span><span class="chip">ONVIF / IP Webcam</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pipeline - every frame, on the classroom laptop</h3>
+      <div class="flow">
+        <div class="node cam"><span class="k">1 · Camera</span><b>CCTV / phone</b><p>RTSP (H.264) or MJPEG stream, 1080p. Auto-reconnect if Wi-Fi drops.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node cam"><span class="k">2 · Frame reader</span><b>Latest frame only</b><p>Background thread drops old frames, so a slow CPU never lags behind.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">3 · Detection</span><b>SCRFD + tiled scan</b><p>Whole frame + overlapping full-resolution tiles find tiny faces at the back.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">4 · Tracking</span><b>Stable IDs</b><p>Velocity prediction; crowded or re-found faces are re-identified - no name swaps.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">5 · Recognition</span><b>ArcFace 512-d</b><p>Cosine match against each student's averaged embedding + a margin over the 2nd best.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">6 · Voting</span><b>k-of-n frames</b><p>3 strong or 5 normal matches within 30 s. One bad frame can't mark anyone.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node out"><span class="k">7 · Attendance</span><b>Mark + proof</b><p>Once per session (DB constraint). Face crop + full frame saved as proof; late flagged.</p></div>
+      </div>
+      <div class="loop">
+        <div><b>⟲ Auto-zoom controller</b> <span class="muted small">(phone digital zoom or PTZ CCTV over ONVIF)</span><br>
+          <span class="small muted">Zooms onto faces too small to recognise, holds still while a face is being scanned, sweeps the room for missing students, then settles to idle.</span></div>
+        <div class="states"><span class="s">SEARCHING</span>→<span class="s">TARGET_LOCKED</span>→<span class="s">STABILIZING</span>→<span class="s">RECOGNIZING</span>→<span class="s">ATTENDANCE_RECORDED</span>→<span class="s">COOLDOWN</span>→<span class="s">IDLE</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Under the hood</h3>
+      <div class="deep">
+        <div class="node ai"><span class="k">Detection</span><b>SCRFD (buffalo_s)</b>
+          <p>Runs on the whole frame (resized to 640×640) for near faces, plus 8 overlapping 640-px tiles at full 1080p resolution
+          every 2nd frame for far faces. Boxes cut by a tile border are dropped and boxes inside another box are merged, so every
+          face gets exactly one box.</p></div>
+        <div class="node ai"><span class="k">Recognition</span><b>ArcFace → 512 numbers</b>
+          <p>Each face is aligned to 112×112 using 5 landmarks and turned into a 512-d embedding. It is compared with every
+          student's averaged embedding: match if cosine ≥ <b>0.40</b> and at least <b>0.05</b> ahead of the second-best student,
+          otherwise "Unknown". Faces under 24 px are not recognised.</p></div>
+        <div class="node ai"><span class="k">Tracking</span><b>IDs that don't swap</b>
+          <p>Boxes are linked frame to frame by overlap, then by predicted position (constant velocity) for fast movers. A face that
+          re-appears, or sits close to another face, is re-identified immediately; one student name can belong to only one face per frame.</p></div>
+        <div class="node ai"><span class="k">Voting &amp; quality</span><b>Evidence, not one frame</b>
+          <p>Marked after <b>3</b> matches in 30 s if the best match ≥ 0.55, else <b>5</b>. Frames taken while the camera moves give no
+          votes. Faces that fail are labelled Low light / Face not clear / Turned away / Too far instead of guessing.</p></div>
+        <div class="node ai"><span class="k">Auto-zoom</span><b>Target, hold, sweep, idle</b>
+          <p>Zooms (max 3×) onto unmarked faces under 48 px, never moves while a face is being scanned, waits 4 s before treating a face
+          as lost, sweeps the room with growing gaps (30 s → 5 min) and goes idle after 3 empty sweeps.</p></div>
+        <div class="node out"><span class="k">Reliability</span><b>Built to keep running</b>
+          <p>Auto-reconnect when the stream drops, a bad frame is skipped (not fatal), one camera controller (no conflicting moves),
+          failed DB writes leave no half record, cross-site requests are blocked, Telegram retries on network errors.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>What happens when a student walks in <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">- example, at ~5 FPS</span></h3>
+      <div class="timeline">
+        <div><b>t = 0 s</b><span>Face found by the detector (tile scan if far away) and given a track ID.</span></div>
+        <div><b>+0.2 s</b><span>Too small? Auto-zoom moves the phone camera onto it and waits for focus.</span></div>
+        <div><b>+0.4 s</b><span>ArcFace embedding → best match "Kanika" (0.74) → vote 1/3, box turns yellow.</span></div>
+        <div><b>+1–2 s</b><span>Votes 2/3 and 3/3 from the next frames; the camera is held still meanwhile.</span></div>
+        <div><b>mark</b><span>Row written once (UNIQUE session + name); face crop + full frame saved as proof; late flag if after start + grace.</span></div>
+        <div><b>+0–5 s</b><span>Telegram message to the student, live lists update, records pushed to the online dashboard.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Database (SQLite, on the laptop)</h3>
+      <div class="deep">
+        <div class="node out"><span class="k">attendance</span><p>session, name, time, match score, face px, votes, Face/Manual, zoom, proof file names - <b>one row per student per session</b>.</p></div>
+        <div class="node out"><span class="k">sessions</span><p>name, course, start/end, camera, auto start/stop, late-after minutes, status (scheduled / live / done).</p></div>
+        <div class="node out"><span class="k">students</span><p>name, login ID, PIN hash + salt (PBKDF2, 120k rounds), Telegram chat ID.</p></div>
+        <div class="node out"><span class="k">notifications · zoom_events · audit_log</span><p>Telegram delivery status, every auto-zoom move, every manual change / delete / demo reset.</p></div>
+        <div class="node cam"><span class="k">embeddings.npz</span><p>One averaged 512-d vector per student (from enrolment photos) - this is the "training".</p></div>
+        <div class="node cam"><span class="k">snapshots/</span><p>Proof photos: face crop + full frame with name, score, votes, time and zoom printed on it.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Where the results go</h3>
+      <div class="outs">
+        <div class="node out"><span class="k">Database</span><b>SQLite on the laptop</b><p>Sessions, attendance, students (hashed PINs), notifications, zoom log, audit log.</p></div>
+        <div class="node out"><span class="k">Teacher app</span><b>127.0.0.1:5000</b><p>Live view, sessions &amp; schedules, manual / bulk marking, student profiles, CSV.</p></div>
+        <div class="node out"><span class="k">Students</span><b>Portal + Telegram</b><p>Login ID + PIN portal on the Wi-Fi; Telegram message the moment they're marked.</p></div>
+        <div class="node out"><span class="k">Online</span><b>Dashboard (Render)</b><p>Laptop pushes records every 5 s over HTTPS with a token - read-only copy online.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Measured results <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">- from the project's automated tests</span></h3>
+      <div class="outs">
+        <div class="metric"><b>0</b><span>wrong names in every test (blur, dark, crowds, strangers, people crossing)</span></div>
+        <div class="metric"><b>2% → 87%</b><span>faces ~28 px wide (≈8 m on a phone) recognised per frame, before → after the tiled scan</span></div>
+        <div class="metric"><b>0/6 → 6/6</b><span>far-away students marked without → with auto-zoom (simulated 4K classroom)</span></div>
+        <div class="metric"><b>~5 FPS</b><span>on an i5 laptop CPU, no GPU · memory stable over a 3-min run</span></div>
+        <div class="metric"><b>100%</b><span>leave-one-out accuracy on 143 enrolment photos of 9 students</span></div>
+        <div class="metric"><b>207</b><span>automated checks across 7 test suites, all passing</span></div>
+        <div class="metric"><b>&lt; 1 min</b><span>to enrol a new student: photos → 512-d embedding, no training</span></div>
+        <div class="metric"><b>5 s</b><span>from a mark on the laptop to the online dashboard</span></div>
+      </div>
+      <p class="muted small" style="margin:10px 0 0">Distance and auto-zoom figures come from synthetic tests on enrolment photos; real-classroom testing is ongoing.</p>
+    </div>
+
+    <div class="card">
+      <h3>Privacy &amp; security</h3>
+      <div class="privacy">
+        <div><b>Stays on the laptop</b>
+          <ul><li>Face photos, proof images and face embeddings</li><li>The full database and the Telegram token</li></ul></div>
+        <div><b>Goes online</b>
+          <ul><li>Names, login IDs, hashed PINs, attendance rows - nothing else</li><li>Teacher login, rate-limited PIN login, students see only their own data</li></ul></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- proof -->
+<dialog id="proofDlg">
+  <div class="proof">
+    <img id="pFrame" alt="Full camera frame at the moment of detection">
+    <div class="meta">
+      <img id="pFace" alt="Detected face">
+      <b id="pName" style="font-size:16px"></b>
+      <div id="pInfo" class="muted small" style="overflow-wrap:anywhere"></div>
+      <button class="btn" onclick="proofDlg.close()">Close</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- new / edit session -->
+<dialog id="sessDlg">
+  <form class="form" id="sessForm" method="dialog">
+    <h2 id="sessDlgTitle">New session</h2>
+    <label>Name <input id="fName" required maxlength="60" placeholder="e.g. DL Lecture 5"></label>
+    <label>Subject / course <input id="fCourse" placeholder="e.g. Deep Learning"></label>
+    <div class="two">
+      <label>Starts <input id="fStart" type="datetime-local"></label>
+      <label>Ends <input id="fEnd" type="datetime-local"></label>
+    </div>
+    <div class="two">
+      <label>Late after (minutes) <input id="fLate" type="number" min="0" max="240" value="10"></label>
+      <label>Camera <input id="fCam" readonly placeholder="set on the Live tab"></label>
+    </div>
+    <label class="check"><input id="fAuto" type="checkbox"> Start and stop the camera automatically at these times</label>
+    <label class="check"><input id="fZoom" type="checkbox"> Use auto-zoom (phone / PTZ camera)</label>
+    <div id="fErr" class="err"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button type="button" class="btn" onclick="sessDlg.close()">Cancel</button>
+      <button type="submit" class="btn primary" id="fSave">Save session</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- student profile -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Student profile">
+  <div class="p-head">
+    <img id="prPhoto" alt="">
+    <div style="flex:1;min-width:0">
+      <h2 id="prName" style="font-size:19px"></h2>
+      <div id="prChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px"></div>
+    </div>
+    <button class="btn small" id="prClose">✕</button>
+  </div>
+  <div class="p-body">
+    <div style="display:flex;gap:16px;align-items:center">
+      <div class="ring" id="prRing"><span id="prPct">-</span></div>
+      <div class="kv">
+        <div><b id="prAtt">-</b><span class="muted small">Attended</span></div>
+        <div><b id="prFace">-</b><span class="muted small">By face</span></div>
+        <div><b id="prManual">-</b><span class="muted small">Manual</span></div>
+        <div><b id="prLate">-</b><span class="muted small">Late</span></div>
+        <div><b id="prMatch">-</b><span class="muted small">Avg match</span></div>
+        <div><b id="prPhotos">-</b><span class="muted small">Photos</span></div>
+      </div>
+    </div>
+    <p class="muted small" id="prLast" style="margin:12px 0 4px"></p>
+    <h3 style="margin-top:18px">Attendance history</h3>
+    <table>
+      <thead><tr><th>Session</th><th>Status</th><th>Time</th><th>How</th><th></th></tr></thead>
+      <tbody id="prHist"></tbody>
+    </table>
+  </div>
+</aside>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const J = (v) => esc(JSON.stringify(v));            // safe inside an HTML attribute
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+                set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+const api = async (url, opts = {}) => {
+  const r = await fetch(url, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+};
+const post = (url, body) => api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+const photo = (n) => "/student_photo/" + encodeURIComponent(n);
+const EMPTY_CAM = (msg) => `<div class="empty-cam"><div class="icon">📷</div>
+  <div style="color:#e2e8f0;font-weight:700;font-size:16px">${msg || "Camera is off"}</div>
+  <ol><li><b>1</b>Name the session</li><li><b>2</b>Choose the camera</li><li><b>3</b>Press Start attendance</li></ol></div>`;
+const hhmm = (t) => (t || "").slice(11, 16);
+const pad = (n) => String(n).padStart(2, "0");
+const localDT = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const nice = (t) => t ? new Date(t.replace(" ", "T")).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "";
+
+// ---------------- tabs
+function showTab(name) {
+  document.querySelectorAll("nav button").forEach((x) => x.classList.toggle("active", x.dataset.tab === name));
+  document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.id === name));
+  if (name === "records") loadSessions();
+  if (name === "students") loadStudents();
+  if (name === "settings") loadSettings();
+}
+document.querySelectorAll("nav button").forEach((b) => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------------- click any student -> profile
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-student]");
+  if (!el || e.target.closest("button, input, a, select")) return;
+  openProfile(el.dataset.student);
+});
+
+// ---------------- live controls
+const today = localDT(new Date()).slice(0, 10);
+$("session").value = today + " Lecture";
+$("camType").value = store.get("camType") || "0";
+$("camUrl").value = store.get("camUrl") || "";
+const syncCam = () => {
+  const t = $("camType").value;
+  $("urlWrap").style.display = t === "0" ? "none" : "";
+  $("phoneCtl").style.display = t === "phone" ? "" : "none";
+  $("streamWrap").style.display = t === "phone" ? "" : "none";
+  $("camUrl").placeholder = t === "phone" ? "192.168.1.7:8080" : "rtsp://user:pass@192.168.1.20:554/stream1";
+};
+$("camType").onchange = () => { syncCam(); readPhone(); }; syncCam();
+setTimeout(() => readPhone(), 0);
+
+const phoneSrc = () => { try { return cameraSource(); } catch { return ""; } };
+let zoomTimer;
+const sendPtz = () => {
+  $("zoomVal").textContent = (+$("zoom").value).toFixed(1) + "x";
+  clearTimeout(zoomTimer);
+  zoomTimer = setTimeout(async () => {
+    try {
+      await post("/api/phone/zoom", { zoom: +$("zoom").value, pan_x: +$("panX").value, pan_y: +$("panY").value, source: phoneSrc() });
+      $("phoneMsg").textContent = "";
+    } catch (e) { $("phoneMsg").textContent = e.message; }
+  }, 250);
+};
+["zoom", "panX", "panY"].forEach((id) => $(id).oninput = sendPtz);
+$("autoZoom").onchange = async () => {
+  if (!wasRunning) return;
+  $("phoneMsg").textContent = $("autoZoom").checked ? "Starting auto-zoom..." : "Auto-zoom off";
+  try { await post("/api/autozoom", { on: $("autoZoom").checked }); }
+  catch (e) { $("autoZoom").checked = !$("autoZoom").checked; $("phoneMsg").textContent = e.message; }
+};
+$("hdBtn").onclick = async () => {
+  $("phoneMsg").textContent = "Setting...";
+  try { const r = await post("/api/phone/optimize", { size: $("phoneSize").value, source: phoneSrc() }); $("phoneMsg").textContent = "Done. " + r.note; }
+  catch (e) { $("phoneMsg").textContent = e.message; }
+};
+async function readPhone() {
+  if ($("camType").value !== "phone" || !$("camUrl").value.trim()) return;
+  try {
+    const r = await post("/api/phone/status", { source: phoneSrc() });
+    $("zoom").max = r.max_zoom; $("zoom").value = r.zoom; $("zoomVal").textContent = r.zoom.toFixed(1) + "x";
+    $("panX").value = r.pan_x; $("panY").value = r.pan_y;
+    if (r.sizes.includes(r.size)) $("phoneSize").value = r.size;
+    $("phoneMsg").textContent = `Phone connected · ${r.size} · quality ${r.quality} · battery ${r.battery}%`;
+  } catch (e) { $("phoneMsg").textContent = e.message; }
+}
+$("camUrl").onchange = readPhone;
+
+function cameraSource() {
+  const t = $("camType").value;
+  if (t === "0") return "0";
+  let u = $("camUrl").value.trim();
+  if (!u) throw new Error("Enter the camera address.");
+  if (t === "phone") {
+    const host = u.replace(/^[a-z]+:\/\//i, "").split("/")[0];
+    return $("phoneStream").value === "h264" ? `rtsp://${host}/h264_ulaw.sdp` : `http://${host}/video`;
+  }
+  return u;
+}
+
+async function startLive(source, sessionName, sid) {
+  showErr("");
+  store.set("camType", $("camType").value); store.set("camUrl", $("camUrl").value);
+  const autozoom = $("camType").value === "phone" && $("autoZoom").checked;
+  if (sid) await post(`/api/sessions/${sid}/start`, { source, autozoom });
+  else await post("/api/start", { source, session: sessionName, autozoom });
+  $("videoBox").innerHTML = `<img src="/video?t=${Date.now()}" alt="Live camera">`;
+}
+$("startBtn").onclick = async () => {
+  try {
+    $("startBtn").disabled = true; $("startBtn").textContent = "Starting...";
+    const name = $("session").value.trim();
+    const known = sessions.find((s) => s.name === name && s.id && s.status !== "done");
+    await startLive(cameraSource(), name, known && known.id);
+  } catch (e) { showErr(e.message); }
+  $("startBtn").textContent = "▶ Start attendance";
+  refresh();
+};
+$("stopBtn").onclick = async () => { await post("/api/stop", {}); refresh(); };
+function showErr(m) { $("err").textContent = m; $("err").style.display = m ? "block" : "none"; }
+
+let viewSession = null, wasRunning = false, lastStatus = null;
+async function refresh() {
+  let s;
+  // camera running: its session. Camera off: the session typed in the box (so lists + manual marks match it)
+  const q = lastStatus && lastStatus.running ? viewSession : ($("session").value.trim() || viewSession);
+  try { s = await api("/api/status" + (q ? "?session=" + encodeURIComponent(q) : "")); }
+  catch { return; }
+  lastStatus = s;
+  if (s.running) viewSession = s.session;
+  $("pill").textContent = s.running ? "LIVE · " + s.session : "Stopped";
+  $("pill").classList.toggle("live", s.running);
+  $("startBtn").disabled = s.running; $("stopBtn").disabled = !s.running; $("resetBtn").disabled = s.running;
+  $("session").disabled = s.running;
+  if (!s.running && wasRunning) {
+    $("videoBox").innerHTML = EMPTY_CAM("Camera stopped");
+    if (s.error) showErr(s.error);
+    if (currentRec) openSession(currentRec);
+  }
+  if (s.running) showErr(s.error || "");
+  if (s.running && !$("videoBox").querySelector("img")) $("videoBox").innerHTML = `<img src="/video?t=${Date.now()}" alt="Live camera">`;
+  if (s.running !== wasRunning && $("records").classList.contains("active")) loadSessions();
+  wasRunning = s.running;
+  const total = s.present.length + s.absent.length;
+  const pct = total ? Math.round(100 * s.present.length / total) : 0;
+  $("nPresent").textContent = s.present.length; $("nTotal").textContent = total;
+  $("nPct").textContent = pct + "%"; $("liveBar").style.width = pct + "%";
+  $("nAbsent").textContent = s.absent.length;
+  $("cPresent").textContent = s.present.length; $("cAbsent").textContent = s.absent.length;
+  $("nFps").textContent = s.running ? s.fps.toFixed(1) : "-";
+  $("videoBar").style.display = s.running ? "flex" : "none";
+  if (s.running) {
+    $("vbSession").textContent = s.session;
+    $("vbCam").textContent = String(s.source) === "0" ? "Laptop webcam" : /8080/.test(String(s.source)) ? "Phone camera" : "CCTV";
+    $("vbFps").textContent = `${s.fps.toFixed(1)} FPS`;
+  }
+  const tm = s.timing || {};
+  $("fpsWhy").textContent = s.running && tm.detect !== undefined ? `detect ${tm.detect}ms · recog ${tm.recognise}ms` : "";
+  const az = s.running && s.autozoom;
+  ["zoom", "panX", "panY"].forEach((id) => $(id).disabled = !!az);
+  if (document.activeElement !== $("autoZoom")) $("autoZoom").checked = s.running ? !!az : $("autoZoom").checked;
+  if (az) $("phoneMsg").textContent = s.autozoom_error || s.autozoom;
+  const setHTML = (el, html) => { if (el._html !== html) { el._html = html; el.innerHTML = html; } };
+  setHTML($("presentList"), s.present.map(presentRow).join("") || '<span class="muted small">Nobody yet</span>');
+  const cl = s.running && s.classroom;
+  $("liveClass").style.display = cl ? "" : "none";
+  if (cl) setHTML($("liveClass"), `<span class="tag">${esc(cl.state.replaceAll("_", " "))}</span>
+    <b>${esc(cl.headline)}</b>
+    ${cl.unknown_individuals ? `<span class="tag warn">${cl.unknown_individuals} unresolved face(s)</span>` : ""}
+    ${cl.weak_regions.length ? `<span class="muted">regions to check: ${esc(cl.weak_regions.join(", "))}</span>` : ""}
+    <span class="tag ${cl.verdict.startsWith("Attendance Verification") ? "ok" : "grey"}">${esc(cl.verdict)}</span>`);
+  const sessNow = s.session || $("session").value.trim();     // camera off: mark into the typed session
+  setHTML($("absentList"), s.absent.map((n) => `
+    <div class="row" data-student="${esc(n)}"><img class="av" src="${photo(n)}" alt="">
+      <div class="grow"><span class="name-link">${esc(n)}</span></div>
+      ${sessNow ? `<button class="btn small" onclick='manual(${J(sessNow)}, ${J(n)}, "add")'>Mark present</button>` : ""}
+    </div>`).join("") || '<span class="muted small">Everyone is present</span>');
+  const next = sessions.filter((x) => x.status === "scheduled" && x.end_at && x.end_at > localDT(new Date()))
+                       .sort((a, b) => a.start_at.localeCompare(b.start_at))[0];
+  $("nextSess").style.display = next && !s.running ? "" : "none";
+  if (next && !s.running) setHTML($("nextSess"), `${inWindow(next) ? "Happening now" : "Next session"}: <b>${esc(next.name)}</b> · ${esc(nice(next.start_at.replace("T", " ")))}`
+    + `${next.auto_start ? " · starts automatically" : ""} <button class="btn small" onclick='$("session").value=${J(next.name)};refresh()'>Use this session</button>`);
+  setHTML($("log"), s.events.map((e) => `<div>${esc(e.time)} · ${esc(e.text)}</div>`).join("") || "No activity yet.");
+}
+function presentRow(r) {
+  const img = r.snapshot ? `/proof/${encodeURIComponent(r.snapshot)}` : photo(r.name);
+  const auto = (r.method || "auto") === "auto";
+  return `<div class="row" data-student="${esc(r.name)}"><img class="av" src="${img}" alt="">
+    <div class="grow"><span class="name-link">${esc(r.name)}</span>
+      <div class="sub">${esc(hhmm(r.time))} · ${auto ? '<span class="tag">Face</span> ' + r.similarity : '<span class="tag manual">Manual</span>'}${r.late ? ' <span class="tag warn">Late</span>' : ""}</div></div>
+    ${auto ? `<button class="btn small" onclick='showProof(${J(r)})'>Proof</button>` : ""}
+  </div>`;
+}
+async function manual(session, name, action) {
+  if (action === "remove" && !window.confirm(`Remove ${name} from "${session}"?`)) return;
+  await post("/api/manual", { session, name, action });
+  refresh(); if (currentRec) openSession(currentRec);
+}
+function showProof(r) {
+  $("pFrame").src = "/proof/" + encodeURIComponent(r.frame_snapshot || r.snapshot);
+  $("pFace").src = "/proof/" + encodeURIComponent(r.snapshot);
+  $("pName").textContent = r.name;
+  $("pInfo").innerHTML = [
+    "Session: " + esc(r.session), "Time: " + esc(r.time),
+    "Match score: " + esc(r.similarity) + " (needs ≥ 0.40)",
+    "Face size: " + esc(r.face_px) + " px", "Frames agreeing: " + esc(r.votes ?? "-"),
+    "Zoom: " + (r.zoom && r.zoom > 1.01 ? r.zoom + "x (auto-zoom)" : "1x"),
+  ].join("<br>");
+  $("proofDlg").showModal();
+}
+
+// ---------------- sessions
+function tgBadge(st) {
+  const map = { sent: ["ok", "✓ sent"], failed: ["bad", "✗ failed"], pending: ["warn", "sending…"] };
+  const [cls, label] = map[st] || ["grey", st || "-"];
+  return `<span class="tag ${cls}">${esc(label)}</span>`;
+}
+const inWindow = (s) => { const n = localDT(new Date()); return s.start_at && s.end_at && s.start_at <= n && n < s.end_at; };
+const statusTag = (s) => s.status === "live" ? '<span class="tag ok">● LIVE</span>'
+  : s.status === "scheduled" && inWindow(s) ? '<span class="tag warn">Now · not recording</span>'
+  : s.status === "scheduled" ? `<span class="tag">${s.auto_start ? "⏰ " : ""}Upcoming</span>` : '<span class="tag grey">Done</span>';
+let sessions = [], currentRec = null, currentRows = [];
+async function loadSessions() {
+  sessions = await api("/api/sessions");
+  $("upcomingList").innerHTML = sessions.filter((s) => s.status !== "done").map((s) => `<option value="${esc(s.name)}">`).join("");
+  const groups = [["Live now", sessions.filter((s) => s.status === "live")],
+                  ["Upcoming", sessions.filter((s) => s.status === "scheduled")],
+                  ["Past", sessions.filter((s) => s.status !== "live" && s.status !== "scheduled")]];
+  $("sessTable").innerHTML = groups.filter(([, l]) => l.length).map(([title, l]) => `<div class="group-title">${title}</div>` +
+    l.map((s) => `<div class="sess-item st-${esc(s.status)} ${s.name === currentRec ? "sel" : ""}" onclick='openSession(${J(s.name)})'>
+      <div class="grow"><b>${esc(s.name)}</b><span class="muted small">${esc(s.course || "")}${s.course ? " · " : ""}${esc(s.start_at ? nice(s.start_at.replace("T", " ")) : nice(s.started))}</span>
+        <div class="progress"><i style="width:${s.total ? Math.round(100 * s.present / s.total) : 0}%"></i></div></div>
+      <div style="text-align:right">${statusTag(s)}<div class="muted small">${s.present}/${s.total}${s.late ? ` · ${s.late} late` : ""}</div></div>
+    </div>`).join("")).join("") || '<div class="empty">No sessions yet.<br>Press <b>+ New session</b>.</div>';
+}
+async function openSession(name) {
+  currentRec = name;
+  const meta = sessions.find((x) => x.name === name) || { name, status: "done" };
+  const s = await api("/api/status?session=" + encodeURIComponent(name));
+  currentRows = s.present;
+  const live = lastStatus && lastStatus.running && lastStatus.session === name;
+  $("recTitle").innerHTML = `${esc(name)} ${statusTag({ ...meta, status: live ? "live" : meta.status })}`;
+  const when = meta.start_at ? `${nice(meta.start_at.replace("T", " "))}${meta.end_at ? " – " + meta.end_at.slice(11) : ""}` : "";
+  $("recSub").textContent = [meta.course, when, meta.auto_start ? "auto start/stop" : "",
+                             meta.start_at ? `late after ${meta.late_after_min} min` : ""].filter(Boolean).join(" · ");
+  $("sessErr").textContent = meta.last_error || ""; $("sessErr").style.display = meta.last_error ? "block" : "none";
+  $("sessStartBtn").style.display = !live && !(lastStatus && lastStatus.running) && meta.status !== "done" ? "" : "none";
+  $("sessStopBtn").style.display = live ? "" : "none";
+  $("sessEditBtn").style.display = meta.id && meta.status === "scheduled" ? "" : "none";
+  $("csvBtn").href = "/api/export?session=" + encodeURIComponent(name); $("csvBtn").style.display = "";
+  $("delSessBtn").style.display = live ? "none" : "";
+  $("detailBody").style.display = "none"; $("detailTable").style.display = "";
+  const late = s.present.filter((r) => r.late).length, total = s.present.length + s.absent.length;
+  $("dPresent").textContent = s.present.length; $("dLate").textContent = late; $("dAbsent").textContent = s.absent.length;
+  $("dPct").textContent = total ? Math.round(100 * s.present.length / total) + "%" : "-";
+  $("dBar").style.width = (total ? Math.round(100 * s.present.length / total) : 0) + "%";
+  const P = s.present.map((r) => `<tr data-student="${esc(r.name)}">
+      <td><input type="checkbox" class="sel" value="${esc(r.name)}"></td>
+      <td><div style="display:flex;gap:10px;align-items:center"><img class="av" src="${r.snapshot ? "/proof/" + encodeURIComponent(r.snapshot) : photo(r.name)}" alt=""><span class="name-link">${esc(r.name)}</span></div></td>
+      <td>${r.late ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>'}</td>
+      <td>${esc(hhmm(r.time))}</td><td>${r.similarity ?? "-"}</td>
+      <td>${(r.method || "auto") === "auto" ? '<span class="tag">Face</span>' : '<span class="tag manual">Manual</span>'}</td>
+      <td>${tgBadge(r.notified)}</td>
+      <td style="white-space:nowrap">${r.snapshot ? `<button class="btn small" onclick='showProof(${J(r)})'>Proof</button>` : ""}
+        <button class="btn small" onclick='manual(${J(name)}, ${J(r.name)}, "remove")'>Remove</button></td></tr>`);
+  const A = s.absent.map((n) => `<tr data-student="${esc(n)}">
+      <td><input type="checkbox" class="sel" value="${esc(n)}"></td>
+      <td><div style="display:flex;gap:10px;align-items:center"><img class="av" src="${photo(n)}" alt=""><span class="name-link">${esc(n)}</span></div></td>
+      <td><span class="tag bad">Absent</span></td><td></td><td></td><td></td><td></td>
+      <td><button class="btn small" onclick='manual(${J(name)}, ${J(n)}, "add")'>Mark present</button></td></tr>`);
+  $("recTable").innerHTML = P.concat(A).join("") || '<tr><td colspan="8" class="muted">No students enrolled.</td></tr>';
+  $("selAll").checked = false; updateSel();
+  loadCoverage(name);
+  const zl = await api("/api/zoomlog?session=" + encodeURIComponent(name));
+  $("zoomLogWrap").style.display = zl.length ? "" : "none";
+  $("zoomLog").innerHTML = zl.map((z) => `<tr><td>${esc(hhmm(z.time))}</td><td>${esc(z.action)}</td><td>${z.zoom}x</td>
+    <td>${z.x}, ${z.y}</td><td>${esc(z.reason)}</td><td>${z.seconds}</td><td>${esc(z.recognised) || "-"}</td></tr>`).join("");
+  loadSessions();
+}
+// ---------------- classroom coverage + unresolved faces
+const REGION_TXT = { completed: "Completed", needs_review: "Needs review", not_inspected: "Not inspected" };
+const REASON_TXT = { unknown: "not recognised", low_light: "low light", not_clear: "not clear", turned_away: "turned away" };
+async function loadCoverage(session) {
+  let c;
+  try { c = await api("/api/coverage?session=" + encodeURIComponent(session)); } catch { return; }
+  if (session !== currentRec) return;
+  $("covCard").style.display = "";
+  $("covHeadline").textContent = c.headline;
+  $("covSub").textContent = `${c.enrolled} enrolled · ${c.unknown_individuals} unresolved face(s)`
+    + (c.weak_regions.length ? ` · regions to check: ${c.weak_regions.join(", ")}` : "")
+    + (c.regions.length ? "" : " · no camera coverage recorded (manual marks only)");
+  const done = c.verdict.startsWith("Attendance Verification");
+  $("covVerdict").textContent = c.verdict;
+  $("covVerdict").className = "tag " + (done ? "ok" : c.verdict.startsWith("Coverage") ? "warn" : "grey");
+  $("covMap").innerHTML = c.regions.length ? c.regions.map((r) => `<div class="region ${r.status}">
+      <b>${esc(r.name)}</b>${REGION_TXT[r.status] || esc(r.status)}<br>
+      <span class="muted">${Math.round(r.seen_s)} s watched${r.best_zoom > 1.05 ? ` · zoom ${r.best_zoom.toFixed(1)}x` : ""}</span><br>
+      ${r.faces} face(s) · ${r.verified} verified${r.tiny ? ` · <b style="display:inline;color:var(--warn)">${r.tiny} too small</b>` : ""}</div>`).join("")
+    : '<div class="muted small" style="grid-column:1/-1">The camera has not covered this session yet.</div>';
+  $("covMissing").innerHTML = c.not_verified.map((n) => `<span class="chip" data-student="${esc(n)}">${esc(n)}</span>`).join("")
+    || '<span class="tag ok">Everyone verified</span>';
+  const list = c.unresolved.filter((u) => u.status !== "resolved");
+  $("unresWrap").style.display = list.length ? "" : "none";
+  const options = c.not_verified.map((n) => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  $("unresList").innerHTML = list.map((u) => `<div class="uface">
+      <img src="${u.snapshot ? "/proof/" + encodeURIComponent(u.snapshot) : ""}" alt="">
+      <div class="grow">
+        <b>Face #${u.uid}</b> · ${esc(REASON_TXT[u.reason] || u.reason || "")}<br>
+        <span class="muted">${esc(u.region_name)} · ${u.attempts} tries · ${u.best_px}px</span>
+        ${u.status === "open" ? `<select id="as-${u.id}"><option value="">This is…</option>${options}</select>
+          <button class="btn small" onclick="unresolved(${u.id}, 'assign')">Confirm</button>
+          <button class="btn small" onclick="unresolved(${u.id}, 'ignore')">Not a student</button>`
+        : `<div style="margin-top:4px"><span class="tag ${u.status === "assigned" ? "ok" : "grey"}">${u.status === "assigned" ? "Verified as " + esc(u.resolved_as) : "Ignored"}</span>
+          <button class="btn small" onclick="unresolved(${u.id}, 'reopen')">Undo</button></div>`}
+      </div></div>`).join("");
+}
+async function unresolved(id, action) {
+  const body = { action };
+  if (action === "assign") {
+    body.name = $("as-" + id).value;
+    if (!body.name) return window.alert("Choose which student this is.");
+    if (!window.confirm(`Mark ${body.name} present from this face? (manual, verified by teacher)`)) return;
+  }
+  try { await post(`/api/unresolved/${id}`, body); } catch (e) { return window.alert(e.message); }
+  openSession(currentRec); refresh();
+}
+
+const selected = () => [...document.querySelectorAll("#recTable .sel:checked")].map((c) => c.value);
+function updateSel() { $("selCount").textContent = `${selected().length} selected`; }
+$("recTable").addEventListener("change", updateSel);
+$("selAll").onchange = () => { document.querySelectorAll("#recTable .sel").forEach((c) => c.checked = $("selAll").checked); updateSel(); };
+async function bulk(names, action) {
+  if (!names.length) return window.alert("Select students first.");
+  if (action === "remove" && !window.confirm(`Remove ${names.length} student(s) from "${currentRec}"?`)) return;
+  try { await post("/api/manual/bulk", { session: currentRec, names, action }); } catch (e) { window.alert(e.message); }
+  openSession(currentRec); refresh();
+}
+$("bulkAdd").onclick = () => bulk(selected(), "add");
+$("bulkRemove").onclick = () => bulk(selected(), "remove");
+$("allPresent").onclick = () => {
+  const absent = [...document.querySelectorAll("#recTable .sel")].map((c) => c.value).filter((n) => !currentRows.some((r) => r.name === n));
+  if (!absent.length) return window.alert("Everyone is already present.");
+  if (window.confirm(`Mark ${absent.length} absent student(s) present (manual)?`)) bulk(absent, "add");
+};
+$("sessStartBtn").onclick = async () => {
+  const meta = sessions.find((x) => x.name === currentRec) || {};
+  try {
+    // camera chosen on the Live tab; if that is just the webcam, prefer the one saved with the session
+    const src = ($("camType").value === "0" && meta.camera) ? meta.camera : (phoneSrc() || meta.camera || "0");
+    await startLive(src, currentRec, meta.id);
+    showTab("live");
+  } catch (e) { $("sessErr").textContent = e.message; $("sessErr").style.display = "block"; }
+  refresh();
+};
+$("sessStopBtn").onclick = async () => { await post("/api/stop", {}); await refresh(); openSession(currentRec); };
+
+let editingId = null;
+function openSessionForm(meta) {
+  editingId = meta ? meta.id : null;
+  $("sessDlgTitle").textContent = meta ? "Edit session" : "New session";
+  const start = new Date(); start.setMinutes(start.getMinutes() < 30 ? 30 : 60, 0, 0);
+  const end = new Date(start.getTime() + 60 * 60000);
+  $("fName").value = meta ? meta.name : `${localDT(start).slice(0, 10)} Lecture`;
+  $("fCourse").value = meta ? meta.course || "" : "";
+  $("fStart").value = meta ? meta.start_at || "" : localDT(start);
+  $("fEnd").value = meta ? meta.end_at || "" : localDT(end);
+  $("fLate").value = meta ? meta.late_after_min : 10;
+  $("fCam").value = meta && meta.camera ? meta.camera : phoneSrc();
+  $("fAuto").checked = meta ? !!meta.auto_start : false;
+  $("fZoom").checked = meta ? !!meta.autozoom : $("autoZoom").checked;
+  $("fErr").style.display = "none";
+  $("sessDlg").showModal();
+}
+$("newSessBtn").onclick = () => openSessionForm(null);
+$("sessEditBtn").onclick = () => openSessionForm(sessions.find((x) => x.name === currentRec));
+$("sessForm").onsubmit = async (e) => {
+  e.preventDefault();
+  const body = { name: $("fName").value, course: $("fCourse").value, start_at: $("fStart").value, end_at: $("fEnd").value,
+                 late_after_min: +$("fLate").value, camera: $("fCam").value, auto_start: $("fAuto").checked, autozoom: $("fZoom").checked };
+  try {
+    const r = await post(editingId ? `/api/sessions/${editingId}` : "/api/sessions", body);
+    $("sessDlg").close();
+    await loadSessions(); openSession(r.session.name);
+  } catch (err) { $("fErr").textContent = err.message; $("fErr").style.display = "block"; }
+};
+
+async function deleteRecords(body, question) {
+  if (!window.confirm(question)) return;
+  try {
+    const meta = sessions.find((x) => x.name === body.session);
+    let r = { records: 0, photos: 0 };
+    if (meta && meta.id && meta.present === 0 && !body.all) await api(`/api/sessions/${meta.id}`, { method: "DELETE" });
+    else r = await post("/api/delete", body);
+    window.alert(`Deleted. ${r.records} attendance records and ${r.photos} proof photos removed.`);
+    currentRec = null;
+    $("recTitle").textContent = "Select a session"; $("recSub").textContent = "";
+    ["csvBtn", "delSessBtn", "sessStartBtn", "sessStopBtn", "sessEditBtn"].forEach((i) => $(i).style.display = "none");
+    $("detailBody").style.display = ""; $("detailTable").style.display = "none"; $("covCard").style.display = "none";
+    loadSessions(); refresh();
+  } catch (e) { window.alert("Could not delete: " + e.message); }
+}
+$("delSessBtn").onclick = () => deleteRecords({ session: currentRec },
+  `Delete the session "${currentRec}" and all its attendance + proof photos?\nThis cannot be undone. (Students and their photos are kept.)`);
+$("delAllBtn").onclick = () => deleteRecords({ all: true },
+  "Delete EVERY attendance record of EVERY session, with all proof photos?\nThis cannot be undone. (Students and their photos are kept.)");
+
+// ---------------- demo reset
+async function resetDemo() {
+  if (lastStatus && lastStatus.running) return window.alert("Stop the camera first.");
+  if (!window.confirm("Reset demo data?\n\nDeletes ALL attendance, sessions, proof photos, Telegram log and zoom log.\n"
+      + "Students, photos, enrolment, login IDs and PINs are kept.")) return;
+  try {
+    const r = await post("/api/demo/reset", {});
+    window.alert(`Clean slate: removed ${r.records} attendance records, ${r.sessions} sessions and ${r.photos} proof photos.`);
+    currentRec = null; viewSession = null;
+    $("session").value = today + " Lecture";
+    $("recTitle").textContent = "Select a session"; $("recSub").textContent = "";
+    ["csvBtn", "delSessBtn", "sessStartBtn", "sessStopBtn", "sessEditBtn"].forEach((i) => $(i).style.display = "none");
+    $("detailBody").style.display = ""; $("detailTable").style.display = "none"; $("covCard").style.display = "none";
+    $("videoBox").innerHTML = EMPTY_CAM();
+    showErr(""); await loadSessions(); refresh();
+  } catch (e) { window.alert("Could not reset: " + e.message); }
+}
+$("resetBtn").onclick = resetDemo;
+$("resetBtn2").onclick = resetDemo;
+
+// ---------------- student profile
+async function openProfile(name) {
+  let p;
+  try { p = await api("/api/student/" + encodeURIComponent(name)); } catch (e) { return window.alert(e.message); }
+  $("prPhoto").src = photo(name); $("prName").textContent = p.name;
+  $("prChips").innerHTML = [p.roll ? `<span class="tag">ID ${esc(p.roll)}</span>` : '<span class="tag grey">no login ID</span>',
+    p.enrolled ? '<span class="tag ok">Face enrolled</span>' : '<span class="tag warn">Not enrolled</span>',
+    p.has_pin ? '<span class="tag ok">PIN set</span>' : '<span class="tag grey">no PIN</span>',
+    p.telegram ? '<span class="tag ok">Telegram linked</span>' : '<span class="tag grey">Telegram not linked</span>'].join("");
+  const pct = p.percent ?? 0, col = pct >= 75 ? "var(--ok)" : pct >= 50 ? "var(--warn)" : "var(--bad)";
+  $("prRing").style.background = `conic-gradient(${col} ${pct * 3.6}deg, #e2e8f0 0)`;
+  $("prPct").textContent = p.percent == null ? "-" : pct + "%"; $("prPct").style.color = col;
+  $("prAtt").textContent = `${p.attended}/${p.total}`; $("prFace").textContent = p.face; $("prManual").textContent = p.manual;
+  $("prLate").textContent = p.history.filter((h) => h.late).length;
+  $("prMatch").textContent = p.avg_match ?? "-"; $("prPhotos").textContent = p.photos;
+  $("prLast").textContent = p.last_seen ? `Last marked ${nice(p.last_seen)}` : "Not marked in any session yet.";
+  $("prHist").innerHTML = p.history.map((h) => h.status === "present" ? `<tr>
+      <td>${esc(h.session)}</td><td>${h.late ? '<span class="tag warn">Late</span>' : '<span class="tag ok">Present</span>'}</td>
+      <td>${esc(nice(h.time))}</td><td>${h.method === "auto" ? '<span class="tag">Face</span> ' + (h.similarity ?? "") : '<span class="tag manual">Manual</span>'}</td>
+      <td>${h.snapshot ? `<button class="btn small" onclick='showProof(${J(h)})'>Proof</button>` : ""}</td></tr>`
+    : `<tr><td>${esc(h.session)}</td><td><span class="tag bad">Absent</span></td><td></td><td></td><td></td></tr>`).join("")
+    || '<tr><td colspan="5" class="muted">No sessions yet.</td></tr>';
+  $("drawer").classList.add("open"); $("scrim").classList.add("open");
+}
+const closeProfile = () => { $("drawer").classList.remove("open"); $("scrim").classList.remove("open"); };
+$("prClose").onclick = closeProfile; $("scrim").onclick = closeProfile;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeProfile(); });
+
+// ---------------- students
+async function loadStudents() {
+  const s = await api("/api/students");
+  let roster = [];
+  try { roster = (await api("/api/roster")).students; } catch {}
+  const rollOf = Object.fromEntries(roster.map((r) => [r.name, r.roll]));
+  $("studentGrid").innerHTML = s.students.map((st) => `
+    <div class="stu" data-student="${esc(st.name)}"><img src="${photo(st.name)}" alt="">
+      <div class="name-link" style="margin-top:10px">${esc(st.name)}</div>
+      <div class="muted small">${rollOf[st.name] ? "ID " + esc(rollOf[st.name]) + " · " : ""}${st.photos} photos</div>
+      <div style="margin-top:6px">${st.enrolled ? '<span class="tag ok">Enrolled</span>' : '<span class="tag warn">Not enrolled</span>'}</div>
+    </div>`).join("") || '<div class="empty">No students yet.</div>';
+  $("enrollBtn").disabled = s.enrolling;
+  if (s.enroll_output) { $("enrollOut").style.display = ""; $("enrollOut").textContent = s.enroll_output; }
+  if (s.enrolling) setTimeout(loadStudents, 2000);
+  loadRoster(roster);
+}
+async function loadRoster(list) {
+  const students = list || (await api("/api/roster")).students;
+  $("rosterTable").innerHTML = students.map((st) => `<tr data-student="${esc(st.name)}">
+    <td><span class="name-link">${esc(st.name)}</span></td>
+    <td><input value="${esc(st.roll)}" size="9" placeholder="FA10" onchange='saveRoll(${J(st.name)}, this)'></td>
+    <td><span id="pin-${esc(st.name).replace(/\W/g, "_")}">${st.has_pin ? '<span class="tag ok">set</span>' : '<span class="tag grey">none</span>'}</span>
+        <button class="btn small" onclick='newPin(${J(st.name)})'>${st.has_pin ? "Reset" : "Generate"}</button></td>
+    <td>${st.telegram ? `<span class="tag ok">linked</span> <button class="btn small" onclick='testMsg(${J(st.name)}, this)'>Test</button>` : '<span class="tag grey">not linked</span>'}</td>
+  </tr>`).join("");
+}
+async function testMsg(name, btn) {
+  btn.disabled = true; btn.textContent = "Sending…";
+  try { await post("/api/roster/test", { name }); btn.textContent = "✓ Sent"; }
+  catch (e) { btn.textContent = "✗ Failed"; alertBox(e.message); }
+}
+async function saveRoll(name, input) {
+  try { await post("/api/roster", { name, roll: input.value }); input.style.borderColor = "var(--ok)"; }
+  catch (e) { input.style.borderColor = "var(--bad)"; alertBox(e.message); }
+}
+async function newPin(name) {
+  if (!window.confirm(`Make a new PIN for ${name}? The old PIN stops working.`)) return;
+  const r = await post("/api/roster/pin", { name });
+  const cell = document.getElementById("pin-" + name.replace(/\W/g, "_"));
+  cell.innerHTML = `<b style="font-size:15px;letter-spacing:.1em">${esc(r.pin)}</b> <span class="muted small">(note it now - shown once)</span>`;
+}
+function alertBox(m) { $("enrollOut").style.display = ""; $("enrollOut").textContent = m; }
+$("addBtn").onclick = async () => {
+  const fd = new FormData();
+  fd.append("name", $("newName").value);
+  for (const f of $("newPhotos").files) fd.append("photos", f);
+  try {
+    const r = await api("/api/students", { method: "POST", body: fd });
+    alertBox(`Saved ${r.saved} files. Now press Re-enroll.`);
+    $("newName").value = ""; $("newPhotos").value = ""; loadStudents();
+  } catch (e) { alertBox("Error: " + e.message); }
+};
+$("enrollBtn").onclick = async () => {
+  try { await post("/api/enroll", {}); loadStudents(); } catch (e) { alertBox("Error: " + e.message); }
+};
+
+// ---------------- settings
+async function loadSettings() {
+  try {
+    const c = await api("/api/cloud");
+    if (document.activeElement !== $("cloudUrl")) $("cloudUrl").value = c.url || "";
+    $("cloudStatus").textContent = c.status;
+  } catch {}
+  try {
+    const r = await api("/api/roster");
+    $("tgStatus").textContent = r.telegram + (r.bot ? ` - students open t.me/${r.bot}` : "");
+    $("portalUrl").textContent = r.portal;
+  } catch {}
+}
+$("cloudSave").onclick = async () => {
+  $("cloudStatus").textContent = "Connecting...";
+  try { const r = await post("/api/cloud", { url: $("cloudUrl").value, token: $("cloudToken").value }); $("cloudStatus").textContent = r.status; $("cloudToken").value = ""; }
+  catch (e) { $("cloudStatus").textContent = e.message; }
+};
+$("tgSave").onclick = async () => {
+  $("tgStatus").textContent = "Checking...";
+  try { const r = await post("/api/telegram", { token: $("tgToken").value }); $("tgToken").value = ""; $("tgStatus").textContent = r.status; }
+  catch (e) { $("tgStatus").textContent = e.message; }
+};
+
+$("videoBox").innerHTML = EMPTY_CAM();
+loadSessions().catch(() => {});
+refresh();
+setInterval(refresh, 1500);
+setInterval(() => { if ($("records").classList.contains("active")) loadSessions().catch(() => {}); }, 10000);
+setInterval(() => {                 // live session open in the Sessions tab: keep coverage current
+  if ($("records").classList.contains("active") && currentRec && lastStatus && lastStatus.running
+      && lastStatus.session === currentRec) loadCoverage(currentRec);
+}, 5000);
+</script>
+</body>
+</html>

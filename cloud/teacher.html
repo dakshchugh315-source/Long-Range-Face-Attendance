@@ -3,65 +3,93 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Face Attendance - Online</title>
+<title>Face Attendance · Online</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='4' fill='%234f46e5'/%3E%3Ccircle cx='8' cy='6.5' r='2.6' fill='white'/%3E%3Cpath d='M3.5 13c.8-2.3 2.5-3.4 4.5-3.4s3.7 1.1 4.5 3.4' fill='white'/%3E%3C/svg%3E">
 <style>
-  :root { --bg:#f4f5f7; --card:#fff; --text:#1d2330; --muted:#6b7280; --line:#e5e7eb; --accent:#2563eb; --ok:#16a34a; --bad:#dc2626; --warn:#d97706; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
-  header { display:flex; align-items:center; gap:12px; padding:12px 16px; background:var(--card); border-bottom:1px solid var(--line); flex-wrap:wrap; }
-  h1 { font-size:17px; margin:0; } .muted { color:var(--muted); font-size:13px; }
-  main { max-width:1100px; margin:0 auto; padding:16px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:14px; }
-  input, button, select { font:inherit; padding:9px 12px; border-radius:8px; border:1px solid var(--line); }
-  button { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; cursor:pointer; }
-  button.ghost { background:#fff; color:var(--text); border-color:var(--line); }
-  .pill { margin-left:auto; font-size:12px; font-weight:600; padding:4px 10px; border-radius:99px; background:#e5e7eb; color:var(--muted); }
-  .pill.on { background:#dcfce7; color:var(--ok); } .pill.stale { background:#fef3c7; color:var(--warn); }
-  .grid { display:grid; grid-template-columns: 280px minmax(0,1fr); gap:14px; }
-  table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:8px; border-bottom:1px solid var(--line); }
-  th { font-size:12px; color:var(--muted); } tr.click { cursor:pointer; } tr.sel { background:#eef2ff; }
-  .tag { font-size:11px; padding:2px 7px; border-radius:6px; background:#eef2ff; color:var(--accent); font-weight:600; }
-  .tag.m { background:#fef3c7; color:var(--warn); }
-  .stats { display:flex; gap:10px; margin-bottom:10px; } .stat { flex:1; background:#f9fafb; border-radius:10px; padding:10px; }
-  .stat b { display:block; font-size:22px; }
-  .err { color:var(--bad); font-size:13px; min-height:18px; }
-  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  :root { --bg:#f5f6f8; --card:#fff; --soft:#f8f9fb; --text:#101828; --text-2:#344054; --muted:#667085; --faint:#98a2b3; --line:#e4e7ec; --line-2:#eaecf0;
+          --accent:#4f46e5; --accent-2:#4338ca; --accent-soft:#eef2ff; --ok:#067647; --ok-2:#17b26a; --ok-soft:#ecfdf3; --ok-line:#abefc6;
+          --bad:#b42318; --bad-soft:#fef3f2; --bad-line:#fecdca; --warn:#b54708; --warn-soft:#fffaeb; --warn-line:#fedf89;
+          --font:"Inter","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.5 var(--font); background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; }
+  header { background:#0c111d; color:#fff; border-bottom:1px solid #1f242f; }
+  header .in { max-width:1200px; margin:0 auto; display:flex; align-items:center; gap:12px; padding:12px 20px; flex-wrap:wrap; }
+  .logo { width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#6366f1,#4338ca); display:grid; place-items:center; flex:none; }
+  .logo svg { width:19px; height:19px; fill:none; stroke:#fff; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+  .brand b { display:block; font-size:15px; } .brand span { font-size:12px; color:#94969c; }
+  #live { color:#cecfd2; font-size:13px; margin-left:12px; }
+  .pill { margin-left:auto; font-size:12.5px; font-weight:600; padding:4px 11px; border-radius:99px; background:#1f242f; color:#cecfd2; display:inline-flex; align-items:center; gap:7px; }
+  .pill::before { content:""; width:7px; height:7px; border-radius:50%; background:#61646c; }
+  .pill.on { color:#75e0a7; } .pill.on::before { background:var(--ok-2); box-shadow:0 0 0 3px rgba(23,178,106,.2); }
+  .pill.stale { color:#fec84b; } .pill.stale::before { background:#f79009; }
+  main { max-width:1200px; margin:0 auto; padding:24px 20px 40px; }
+  h1 { font-size:22px; margin:0 0 4px; letter-spacing:-.015em; } .muted { color:var(--muted); font-size:13px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; box-shadow:0 1px 2px rgba(16,24,40,.05); }
+  .card-head { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid var(--line-2); }
+  .card-head b { flex:1; font-size:15px; }
+  input { font:inherit; height:42px; padding:0 13px; border-radius:8px; border:1px solid #d0d5dd; box-shadow:0 1px 2px rgba(16,24,40,.05); width:100%; }
+  input:focus { outline:none; border-color:#a5b4fc; box-shadow:0 0 0 4px rgba(99,102,241,.14); }
+  button { font:inherit; height:40px; padding:0 15px; border-radius:8px; background:var(--accent); color:#fff; border:1px solid var(--accent); font-weight:600; cursor:pointer; }
+  button:hover { background:var(--accent-2); }
+  button.ghost { background:#fff; color:var(--text-2); border-color:#d0d5dd; height:34px; font-size:13px; }
+  header button.ghost { background:transparent; color:#cecfd2; border-color:#333741; }
+  .grid { display:grid; grid-template-columns:320px minmax(0,1fr); gap:20px; align-items:start; }
+  table { width:100%; border-collapse:collapse; } th, td { text-align:left; padding:11px 18px; border-bottom:1px solid var(--line-2); }
+  th { font-size:12px; color:var(--muted); background:var(--soft); font-weight:600; } tbody tr:last-child td { border-bottom:0; }
+  tr.click { cursor:pointer; } tr.click:hover { background:var(--soft); } tr.sel { background:var(--accent-soft); }
+  tr.click td:last-child { text-align:right; color:var(--muted); font-weight:600; white-space:nowrap; }
+  .tag { display:inline-flex; font-size:12px; padding:1px 9px; border-radius:99px; background:var(--accent-soft); color:var(--accent-2); font-weight:600; border:1px solid #c7d2fe; }
+  .tag.m { background:var(--warn-soft); color:var(--warn); border-color:var(--warn-line); }
+  .tag.ok { background:var(--ok-soft); color:var(--ok); border-color:var(--ok-line); } .tag.bad { background:var(--bad-soft); color:var(--bad); border-color:var(--bad-line); }
+  .stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; padding:18px; border-bottom:1px solid var(--line-2); }
+  .stat { background:var(--soft); border:1px solid var(--line-2); border-radius:10px; padding:12px 14px; }
+  .stat b { display:block; font-size:24px; letter-spacing:-.01em; } .stat span { font-size:12.5px; color:var(--muted); }
+  .err { color:var(--bad); font-size:13px; min-height:20px; margin:8px 0; }
+  .login { max-width:400px; margin:60px auto; padding:28px; }
+  .note { margin-top:16px; text-align:center; }
+  @media (max-width:860px) { .grid { grid-template-columns:1fr; } #live { margin-left:0; flex-basis:100%; order:5; } }
 </style>
 </head>
 <body>
-<header>
-  <h1>Face Attendance · Online</h1>
-  <span class="muted" id="live"></span>
+<header><div class="in">
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="10.5" r="2.6"/><path d="M8 17c.8-1.8 2.2-2.7 4-2.7s3.2.9 4 2.7"/></svg></div>
+  <div class="brand"><b>Face Attendance</b><span>Online dashboard</span></div>
+  <span id="live"></span>
   <span class="pill" id="pill">-</span>
-  <button class="ghost" id="logout" style="display:none">Log out</button>
-</header>
+  <button class="ghost" id="logout" style="display:none">Sign out</button>
+</div></header>
 <main>
-  <div class="card" id="loginCard" style="display:none;max-width:380px">
-    <h1 style="margin-bottom:8px">Teacher login</h1>
+  <div class="card login" id="loginCard" style="display:none">
+    <h1>Teacher sign in</h1>
+    <p class="muted" style="margin:0 0 18px">Read-only copy of the attendance recorded in class.</p>
     <form id="loginForm">
-      <input id="pw" type="password" placeholder="Password" autocomplete="current-password" style="width:100%;margin-bottom:8px" required>
+      <input id="pw" type="password" placeholder="Password" autocomplete="current-password" required>
       <div class="err" id="loginErr"></div>
-      <button type="submit" style="width:100%">Log in</button>
+      <button type="submit" style="width:100%">Sign in</button>
     </form>
-    <p class="muted">Students: <a href="/student">open the student portal</a></p>
+    <p class="muted" style="margin:16px 0 0">Students: <a href="/student">open the student portal</a></p>
   </div>
   <div id="app" style="display:none">
+    <div style="margin-bottom:20px"><h1>Attendance</h1><div class="muted">Live from the classroom laptop, refreshed every 5 seconds.</div></div>
     <div class="grid">
       <div class="card">
-        <b>Sessions</b>
+        <div class="card-head"><b>Sessions</b></div>
         <table><tbody id="sessions"></tbody></table>
       </div>
       <div class="card">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div class="card-head">
           <b id="title">Select a session</b>
-          <a id="csv" style="margin-left:auto;display:none"><button class="ghost">Download CSV</button></a>
+          <a id="csv" style="display:none"><button class="ghost">Export CSV</button></a>
         </div>
-        <div class="stats"><div class="stat"><b id="nP" style="color:var(--ok)">-</b><span class="muted">Present</span></div>
-          <div class="stat"><b id="nA" style="color:var(--bad)">-</b><span class="muted">Absent</span></div></div>
-        <table><thead><tr><th>Name</th><th>Status</th><th>Time</th><th>How</th></tr></thead><tbody id="rows"></tbody></table>
+        <div class="stats">
+          <div class="stat"><b id="nP" style="color:var(--ok)">-</b><span>Present</span></div>
+          <div class="stat"><b id="nA" style="color:var(--bad)">-</b><span>Absent</span></div>
+          <div class="stat"><b id="nPct">-</b><span>Attendance</span></div>
+        </div>
+        <table><thead><tr><th>Name</th><th>Status</th><th>Time</th><th>Method</th></tr></thead><tbody id="rows"></tbody></table>
       </div>
     </div>
-    <p class="muted">Recognition runs on the classroom laptop; this page shows the records it sends. No photos are stored online.</p>
+    <p class="muted note">Recognition runs on the classroom laptop; this page only shows the records it sends. No photos are stored online.</p>
   </div>
 </main>
 <script>
@@ -79,7 +107,7 @@ async function load() {
   $("live").textContent = live.running ? `Camera running · ${live.session} · ${live.present}/${live.enrolled} present` : "Camera not running";
   if (!current && data.sessions.length) current = data.sessions[0].session;
   $("sessions").innerHTML = data.sessions.map((s) => `<tr class="click ${s.session === current ? "sel" : ""}" data-s="${esc(s.session)}">
-    <td>${esc(s.session)}<div class="muted">${esc(s.started)}</div></td><td>${s.present.length}/${data.students.length}</td></tr>`).join("")
+    <td><b style="font-weight:600">${esc(s.session)}</b><div class="muted">${esc(s.started)}</div></td><td>${s.present.length}/${data.students.length}</td></tr>`).join("")
     || '<tr><td class="muted">No sessions yet</td></tr>';
   document.querySelectorAll("#sessions tr.click").forEach((tr) => tr.onclick = () => { current = tr.dataset.s; render(); load(); });
   render();
@@ -89,10 +117,12 @@ function render() {
   if (!s) return;
   $("title").textContent = s.session;
   $("csv").href = "/api/export?session=" + encodeURIComponent(s.session); $("csv").style.display = "";
+  const tot = s.present.length + s.absent.length;
   $("nP").textContent = s.present.length; $("nA").textContent = s.absent.length;
-  $("rows").innerHTML = s.present.map((r) => `<tr><td>${esc(r.name)}</td><td style="color:var(--ok)">Present</td>
+  $("nPct").textContent = tot ? Math.round(100 * s.present.length / tot) + "%" : "-";
+  $("rows").innerHTML = s.present.map((r) => `<tr><td><b style="font-weight:600">${esc(r.name)}</b></td><td><span class="tag ok">Present</span></td>
       <td>${esc(r.time.slice(11, 16))}</td><td>${r.method === "auto" ? '<span class="tag">Face</span>' : '<span class="tag m">Manual</span>'}</td></tr>`).join("")
-    + s.absent.map((n) => `<tr><td>${esc(n)}</td><td style="color:var(--bad)">Absent</td><td></td><td></td></tr>`).join("");
+    + s.absent.map((n) => `<tr><td><b style="font-weight:600">${esc(n)}</b></td><td><span class="tag bad">Absent</span></td><td></td><td></td></tr>`).join("");
 }
 $("loginForm").onsubmit = async (e) => {
   e.preventDefault();
