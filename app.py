@@ -192,6 +192,8 @@ class Engine:
         reader = cap if is_file else LatestFrame(cap)
         tracks, t_prev, voter = [], time.time(), Voter()
         errors_in_row = 0
+        done_times = deque()
+        self.fps = 0.0
 
         def ema(key, seconds):
             self.timing[key] = round(0.8 * self.timing.get(key, seconds * 1000) + 0.2 * seconds * 1000)
@@ -229,7 +231,8 @@ class Engine:
                     frame = ensure_bgr(frame)
                     newly = process_frame(frame, tracks, gallery, self.present, con,
                                           self.session, self.source, voter,
-                                          zoom=az.zoom if az else 1.0, info=info)
+                                          zoom=az.zoom if az else 1.0, info=info,
+                                          camera_moving=bool(az and az.settling()))
                     errors_in_row = 0
                 except Exception as e:                 # one bad frame must not end the class
                     errors_in_row += 1
@@ -254,7 +257,13 @@ class Engine:
                                             "text": f"{name} marked present "
                                                     f"(match {sim:.2f}, face {px}px)"})
                 now = time.time()
-                self.fps = 0.9 * self.fps + 0.1 / max(now - t_prev, 1e-6)
+                # real throughput: frames actually processed in the last 5 s (an average of
+                # 1/frame-time is biased upwards when fast and slow frames alternate)
+                done_times.append(now)
+                while done_times and now - done_times[0] > 5:
+                    done_times.popleft()
+                if len(done_times) > 1:
+                    self.fps = (len(done_times) - 1) / (done_times[-1] - done_times[0])
                 t_prev = now
                 t_enc = time.time()
                 ok, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
@@ -308,6 +317,31 @@ def safe_student_name(name):
     if not re.fullmatch(r"[A-Za-z0-9 ._-]{1,40}", name) or name.startswith("."):
         abort(400, "Name: letters, numbers, spaces, . _ - only (max 40)")
     return name
+
+
+# ====================================================================== request safety
+LOCAL_NAMES = {"127.0.0.1", "localhost"}
+
+
+def _hostname(hostport):
+    return hostport.rsplit(":", 1)[0] if hostport.count(":") == 1 else hostport
+
+
+@app.before_request
+def block_cross_site():
+    """The teacher app is only for this laptop. Without this, ANY website open in the
+    browser could silently POST to 127.0.0.1:5000 (CSRF) and e.g. delete all records,
+    and DNS-rebinding pages could read it. Reject other Hosts and cross-site writes."""
+    if _hostname(request.host) not in LOCAL_NAMES:
+        abort(403)
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        origin = request.headers.get("Origin") or request.headers.get("Referer") or ""
+        if origin:
+            host = origin.split("://", 1)[-1].split("/", 1)[0]
+            if host != request.host:           # must come from this very app (same host:port)
+                abort(403)
+        if request.mimetype not in ("application/json", "multipart/form-data"):
+            abort(415)                     # cross-site forms can't send JSON without permission
 
 
 # ====================================================================== pages
@@ -387,6 +421,7 @@ def api_status():
     az = getattr(engine, "autozoom", None) if engine.running else None
     return jsonify(autozoom=(az.label() if az else None), autozoom_error=(az.error if az else None),
                    autozoom_state=(az.scan.state if az else None),
+                   camera_state=(az.camera_state() if az else None),
                    running=engine.running, session=session, source=engine.source,
                    fps=round(engine.fps, 1), error=engine.error, timing=engine.timing,
                    enrolled=len(names), present=present,

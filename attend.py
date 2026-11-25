@@ -27,7 +27,7 @@ from face_engine import Gallery, detect, embed, ensure_bgr, face_width, is_turne
 
 # ---------------------------------------------------------------- database
 def open_db(path=None):
-    con = sqlite3.connect(path or config.DB_FILE, check_same_thread=False)
+    con = sqlite3.connect(path or config.DB_FILE, check_same_thread=False, timeout=10)
     con.execute("""CREATE TABLE IF NOT EXISTS attendance (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         session TEXT NOT NULL,
@@ -79,13 +79,22 @@ def mark_present(con, session, name, sim, px, frame, bbox, votes=None, camera=No
     cv2.putText(proof, banner, (10, h - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
     cv2.imwrite(str(config.SNAPSHOT_DIR / full), proof)
 
-    cur = con.execute(
-        "INSERT OR IGNORE INTO attendance(session, name, time, similarity, face_px, snapshot, "
-        "frame_snapshot, votes, method, camera, zoom) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-        (session, name, now.strftime("%Y-%m-%d %H:%M:%S"), round(float(sim), 3), int(px),
-         snap, full, votes, "auto", str(camera) if camera is not None else None,
-         round(float(zoom), 2) if zoom else 1.0))
-    con.commit()
+    try:
+        cur = con.execute(
+            "INSERT OR IGNORE INTO attendance(session, name, time, similarity, face_px, snapshot, "
+            "frame_snapshot, votes, method, camera, zoom) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (session, name, now.strftime("%Y-%m-%d %H:%M:%S"), round(float(sim), 3), int(px),
+             snap, full, votes, "auto", str(camera) if camera is not None else None,
+             round(float(zoom), 2) if zoom else 1.0))
+        con.commit()
+    except Exception:
+        con.rollback()                       # DB failed: no record -> remove the proof photos too,
+        for f in (snap, full):               # the caller retries on the next frame (no duplicate,
+            (config.SNAPSHOT_DIR / f).unlink(missing_ok=True)   # no false success, no orphans)
+        raise
+    if cur.rowcount != 1:                    # already recorded (duplicate attempt): keep no extra proof
+        for f in (snap, full):
+            (config.SNAPSHOT_DIR / f).unlink(missing_ok=True)
     return cur.rowcount == 1
 
 
@@ -120,6 +129,24 @@ class Track:
         self.name = "Unknown"         # last confident recognition on this track
         self.since_rec = 10 ** 6      # frames since that recognition
         self.since_check = 10 ** 6    # frames since recognition last ran on this track
+        self.v = (0.0, 0.0)           # centre velocity in px/frame (smoothed)
+        self.crowded = False          # another face is close: identities could swap
+        self.reacquired = True        # not continuously followed by box overlap -> must re-identify
+
+    def predicted(self):
+        """Where the box should be in the next frame (constant-velocity prediction), so two
+        people crossing each other are not swapped by plain nearest-box matching."""
+        dx, dy = self.v
+        x1, y1, x2, y2 = self.bbox
+        k = 1 + min(self.missed, 3)
+        return (x1 + dx * k, y1 + dy * k, x2 + dx * k, y2 + dy * k)
+
+    def move_to(self, b):
+        ox, oy = (self.bbox[0] + self.bbox[2]) / 2, (self.bbox[1] + self.bbox[3]) / 2
+        nx, ny = (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+        steps = 1 + self.missed
+        self.v = (0.5 * self.v[0] + 0.5 * (nx - ox) / steps, 0.5 * self.v[1] + 0.5 * (ny - oy) / steps)
+        self.bbox = b
 
     def label(self):
         if self.name != "Unknown" and self.since_rec <= config.LABEL_HOLD_FRAMES:
@@ -141,19 +168,22 @@ def update_tracks(tracks, boxes, max_missed=15):
     Returns the track for each box."""
     assigned = [None] * len(boxes)
     free = set(range(len(tracks)))
-    pairs = sorted(((iou(t.bbox, b), ti, bi) for ti, t in enumerate(tracks)
+    pred = [t.predicted() for t in tracks]
+    pairs = sorted(((iou(pred[ti], b), ti, bi) for ti, t in enumerate(tracks)
                     for bi, b in enumerate(boxes)), reverse=True)
     for score, ti, bi in pairs:
         if score < 0.3:
             break
         if ti in free and assigned[bi] is None:
             assigned[bi] = tracks[ti]
+            assigned[bi].reacquired = tracks[ti].missed > 0     # came back after a gap
             free.discard(ti)
     near = sorted((d, ti, bi) for ti in free for bi, b in enumerate(boxes) if assigned[bi] is None
-                  for d in [_centre_close(tracks[ti].bbox, b)] if d is not None)
+                  for d in [_centre_close(pred[ti], b)] if d is not None)
     for d, ti, bi in near:
         if ti in free and assigned[bi] is None:
             assigned[bi] = tracks[ti]
+            assigned[bi].reacquired = True                      # only "close by": could be someone else
             free.discard(ti)
     for ti in free:
         tracks[ti].missed += 1
@@ -162,8 +192,18 @@ def update_tracks(tracks, boxes, max_missed=15):
             t = Track(b)
             tracks.append(t)
             assigned[bi] = t
-        assigned[bi].bbox = b
+        else:
+            assigned[bi].move_to(b)
         assigned[bi].missed = 0
+    # faces close to each other (crossing, sitting side by side) are re-identified every
+    # frame instead of every REVERIFY_EVERY frames, so a swap can never stick
+    for i, ti in enumerate(assigned):
+        a = ti.bbox
+        wa = a[2] - a[0]
+        ti.crowded = any(
+            j != i and np.hypot((a[0] + a[2] - b[0] - b[2]) / 2, (a[1] + a[3] - b[1] - b[3]) / 2)
+            < 1.6 * max(wa, b[2] - b[0])
+            for j, b in enumerate(boxes))
     tracks[:] = [t for t in tracks if t.missed <= max_missed]
     return assigned
 
@@ -214,6 +254,8 @@ class Voter:
         self.hits = {}            # name -> [timestamps]
         self.best = {}            # name -> (sim, px, clean_frame, box)
         self.best_t = {}          # name -> when best was taken
+        self.marked_t = {}        # name -> when it was marked during this run
+        self.frame_no = 0         # frames processed in this run
 
     def add(self, name, sim, px, clean, box, now=None, zoom=1.0):
         now = now or time.time()
@@ -230,6 +272,21 @@ class Voter:
         return len(h)
 
 
+def face_quality(frame, face):
+    """(sharpness, brightness) of a face. Sharpness is the Laplacian variance of the
+    contrast-normalised face at 112x112, divided by the face width - so it is comparable
+    across face sizes and lighting (dark faces aren't called blurry)."""
+    x1, y1, x2, y2 = (int(v) for v in face.bbox)
+    h, w = frame.shape[:2]
+    roi = frame[max(0, y1):min(h, y2), max(0, x1):min(w, x2)]
+    if roi.size == 0:
+        return 0.0, 0.0
+    g = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    bright = float(g.mean())
+    g = cv2.normalize(cv2.resize(g, (112, 112)), None, 0, 255, cv2.NORM_MINMAX)
+    return float(cv2.Laplacian(g, cv2.CV_64F).var()) / max(face_width(face), 1), bright
+
+
 def votes_needed(voter, label):
     """3 checks when the best match is clearly strong, otherwise 5 (weak/blurry matches
     need more evidence so a look-alike is never marked)."""
@@ -241,17 +298,23 @@ def votes_needed(voter, label):
 
 # ---------------------------------------------------------------- per frame
 def process_frame(frame, tracks, gallery, present, con, session, camera=None, voter=None,
-                  zoom=1.0, info=None):
+                  zoom=1.0, info=None, camera_moving=False):
     """Detect, track, recognise, vote, mark. Draws boxes on `frame` in place.
     Returns [(name, similarity, face_px)] for students newly marked present.
     If `info` (dict) is given it is filled with faces=[{box, px, label, votes}] and
-    recognised={names matched in this frame} for the auto-zoom controller."""
+    recognised={names matched in this frame} for the auto-zoom controller.
+    camera_moving=True (zoom/pan in progress): faces are shown but NOT recognised and give
+    no votes - frames grabbed while the camera moves are blurred and unreliable."""
     if voter is None:                     # callers should keep one Voter per session
         voter = process_frame.__dict__.setdefault("_voter", Voter())
     clean = None                          # proof image without boxes (copied only if needed)
     newly = []
     t0 = time.time()
-    faces = [f for f in detect(frame) if face_width(f) >= config.MIN_FACE_PX // 2]
+    # far/small faces need the tiled scan; it is ~90% of detection time, so it runs every
+    # TILE_EVERY-th frame (near faces are found by the whole-frame pass every frame)
+    use_tiles = config.DET_TILES and voter.frame_no % max(1, config.TILE_EVERY) == 0
+    voter.frame_no += 1
+    faces = [f for f in detect(frame, tiles=use_tiles) if face_width(f) >= config.MIN_FACE_PX // 2]
     t_det = time.time() - t0
     boxes = [tuple(int(v) for v in f.bbox) for f in faces]
     owners = update_tracks(tracks, boxes)
@@ -263,11 +326,12 @@ def process_frame(frame, tracks, gallery, present, con, session, camera=None, vo
         tr.since_rec += 1
         tr.since_check += 1
         px = face_width(face)
-        if px < config.MIN_FACE_PX:                # too small: shown, not recognised
+        if px < config.MIN_FACE_PX or camera_moving:   # too small / camera moving: no recognition
             continue
         marked_track = tr.label()[0] in present
-        if marked_track and tr.since_check < config.REVERIFY_EVERY:
-            continue
+        if (marked_track and tr.since_check < config.REVERIFY_EVERY and not tr.crowded
+                and not tr.reacquired):
+            continue                                # same face, followed frame to frame: skip work
         tr.since_check = 0
         name, sim = gallery.match(embed(frame, face), px)
         if name != "Unknown":
@@ -312,18 +376,34 @@ def process_frame(frame, tracks, gallery, present, con, session, camera=None, vo
             if mark_present(con, session, label, bsim, bpx, bframe, bbox,
                             votes=n, camera=camera, zoom=bzoom):
                 newly.append((label, bsim, bpx))
+                voter.marked_t[label] = time.time()
             present.add(label)
 
+        # status shown on the box = the real internal state of this face
         if label in present:
-            color, text = (0, 200, 0), f"{label} OK"
+            fresh = time.time() - voter.marked_t.get(label, 0) < config.MARKED_SHOW_S
+            status, color, text = ("marked", (0, 200, 0), f"{label} - Marked") if fresh else \
+                ("already_marked", (0, 160, 0), f"{label} - Already marked")
+        elif camera_moving:
+            status, color, text = "stabilizing", (160, 160, 160), "Stabilizing..."
         elif label != "Unknown":
-            color, text = (0, 200, 255), f"{label} {n}/{need}"
+            status, color, text = "recognizing", (0, 200, 255), f"{label} {n}/{need}"
         elif px < config.MIN_FACE_PX:
-            color, text = (128, 128, 128), "too far"
-        elif is_turned_away(face):
-            color, text = (200, 160, 60), "turned away"
+            status, color, text = "too_far", (128, 128, 128), "Too far"
+        elif tr.since_check > 10 ** 5:
+            status, color, text = "detecting", (200, 200, 200), "Detecting..."
         else:
-            color, text = (0, 0, 255), "Unknown"
+            sharp, bright = face_quality(frame, face)
+            if bright < config.LOW_LIGHT_LEVEL:
+                status, color, text = "low_light", (0, 140, 255), "Low light"
+            elif is_turned_away(face):
+                status, color, text = "turned_away", (200, 160, 60), "Turned away"
+            elif sharp < config.BLUR_MIN:
+                status, color, text = "not_clear", (0, 140, 255), "Face not clear"
+            else:
+                status, color, text = "unknown", (0, 0, 255), "Unknown"
+        if info is not None:
+            info["faces"][-1]["status"] = status
         x1, y1, x2, y2 = box
         cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
         cv2.putText(frame, f"{text} [{px}px]", (x1, max(15, y1 - 8)),

@@ -355,13 +355,40 @@ class AutoZoom:
     def settling(self):
         return self.busy or self.clock() - self.since < config.AUTOZOOM_SETTLE_S
 
+    def camera_state(self):
+        """One explicit state for the UI / logs, derived from the controller:
+        REPOSITIONING  camera command in flight          STABILIZING  waiting for focus/H.264 after a move
+        RECOGNIZING    a face in view is being scanned   TARGET_LOST  face vanished, waiting to confirm
+        ATTENDANCE_RECORDED  a scan just completed        TARGET_LOCKED  zoomed on a target
+        SEARCHING      sweeping the room                 COOLDOWN     wide view, waiting before next move
+        IDLE           all visible faces done; no sweeping until a new face appears"""
+        if self.busy:
+            return "REPOSITIONING"
+        if self.clock() - self.since < config.AUTOZOOM_SETTLE_S:
+            return "STABILIZING"
+        s = self.scan.state
+        if s in (FACE_SCANNING, FACE_DETECTED):
+            return "RECOGNIZING"
+        if s == FACE_LOST:
+            return "TARGET_LOST"
+        if s == SCAN_COMPLETED:
+            return "ATTENDANCE_RECORDED"
+        if self.state == "TARGET":
+            return "TARGET_LOCKED"
+        if self.state == "SWEEP":
+            return "SEARCHING"
+        if self.fruitless_sweeps >= config.AUTOZOOM_MAX_FRUITLESS:
+            return "IDLE"
+        return "COOLDOWN"
+
     def label(self):
         scan = self.scan.describe()
         hold = " (holding camera)" if self.scan.hold() else ""
+        cs = self.camera_state()
         if self.state == "WIDE":
-            return f"AUTO-ZOOM: wide 1.0x | {scan}{hold}"
+            return f"AUTO-ZOOM [{cs}] wide 1.0x | {scan}{hold}"
         what = self.current.get("reason", "") if self.current else ""
-        return f"AUTO-ZOOM: {self.zoom:.1f}x {what} | {scan}{hold}"
+        return f"AUTO-ZOOM [{cs}] {self.zoom:.1f}x {what} | {scan}{hold}"
 
     def _window_keeps(self, z, cx, cy, holding):
         """Would a zoom to (z, cx, cy) keep every held face inside the picture?"""
@@ -431,6 +458,8 @@ class AutoZoom:
         for f in faces:
             if f["label"] in present or f["px"] >= config.AUTOZOOM_TARGET_PX:
                 continue
+            if f["px"] * self.max_zoom < config.MIN_FACE_PX:
+                continue                                   # too small even at max zoom: zooming can't help
             x1, y1, x2, y2 = f["box"]
             cx, cy = (x1 + x2) / 2 / w, (y1 + y2) / 2 / h
             spot = self._spot(cx, cy)
@@ -457,6 +486,11 @@ class AutoZoom:
             return True
         if hold:
             return False                      # ACTIVE FACE SCANNING = SWEEP DISABLED
+        if self.fruitless_sweeps >= config.AUTOZOOM_MAX_FRUITLESS:
+            # IDLE: repeated sweeps found nobody new. No more sweeping (a stranger in view must not
+            # keep the camera sweeping). New faces in view are still zoomed on by the targeting
+            # above; a sweep that finds someone, or switching auto-zoom off/on, leaves IDLE.
+            return False
         if self.scan.state == SEARCHING_FOR_FACE and now - self.last_sweep > self.sweep_interval():
             self.last_sweep = now
             self.sweep_marked_at_start = len(present)
@@ -502,7 +536,8 @@ class AutoZoom:
             if tn and tn <= set(present):
                 sp["done_until"] = float("inf")          # person there identified + marked: never again
             elif not tn and sp["visits"] >= 3:
-                sp["done_until"] = now + 120             # 3 tries, nobody: turned away / not a student
+                # 3 tries, nobody identified (turned away / not a student): wait 2, 4, 8 ... min
+                sp["done_until"] = now + 120 * 2 ** (sp["visits"] - 3)
         reason = c["reason"] + (" | held for face scan" if c.get("held") else "")
         self.log_event({"time": datetime.fromtimestamp(c["start"]).strftime("%Y-%m-%d %H:%M:%S"),
                         "action": c["action"], "zoom": c["zoom"], "x": c["x"], "y": c["y"],

@@ -27,6 +27,7 @@ DET_THRESHOLD = 0.5
 DET_TILES = True
 TILE_SIZE = 640
 TILE_OVERLAP = 0.25
+TILE_EVERY = 2              # tiled scan every Nth frame (tiles are ~90% of detection time)
 TILE_EDGE_MARGIN = 8        # tile boxes this close to an inner tile border are cut-off duplicates
 
 # Recognition
@@ -47,6 +48,7 @@ AUTOZOOM_REVISIT_S = 25     # don't zoom on the same spot again within this time
 AUTOZOOM_SWEEP_EVERY_S = 30 # scan the room in a grid this often while people are absent
 AUTOZOOM_SWEEP_ZOOM = 2.5
 AUTOZOOM_SWEEP_MAX_S = 300  # sweeps that find nobody back off 30 -> 60 -> 120 ... up to this
+AUTOZOOM_MAX_FRUITLESS = 3  # after this many empty sweeps in a row: IDLE (no sweeping) until a new face shows up
 # Face-scan priority: while a face is detected / being scanned the camera stays put
 AUTOZOOM_FACE_LOSS_S = 4    # face missing this long = genuinely lost (shorter = brief dropout)
 AUTOZOOM_SCAN_STALL_S = 12  # a face that gains no vote this long stops holding (stranger / turned away)
@@ -73,5 +75,11 @@ VOTES_TO_MARK = 5
 VOTES_STRONG = 3            # ...only 3 when the best match is strong (>= STRONG_MATCH)
 STRONG_MATCH = 0.55
 VOTE_WINDOW_S = 30
+# Face quality (only explains WHY a face was not recognised; never forces a match).
+# Measured: dark faces (grey ~18) are still recognised 34-36/36, motion blur at 30 px only 5/36.
+LOW_LIGHT_LEVEL = 40        # face mean grey below this -> "Low light"
+BLUR_MIN = 0.5              # contrast-normalised Laplacian variance per face pixel below this -> "Face not clear"
+MARKED_SHOW_S = 10          # show "Marked" this long after marking, then "Already marked"
+
 LABEL_HOLD_FRAMES = 6       # keep showing a track's name this many frames after it was recognised
 REVERIFY_EVERY = 5          # re-recognise an already-marked face every N frames (catches swaps)

@@ -14,3 +14,6 @@ PROMPT_*.md
 __pycache__/
 *.pyc
 .pytest_cache/
+# local measurement output (may contain student names)
+tools/perf_result.json
+tools/measure_result.json
