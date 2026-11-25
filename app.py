@@ -453,6 +453,7 @@ def api_manual():
         abort(400)
     with contextlib.closing(db()) as con:
         if action == "add":
+            sessions_db.ensure(con, session)        # marking into a new name creates the session
             if mark_manual(con, session, name):
                 bot.notify(name, session, "manual")
             if engine.running and engine.session == session:

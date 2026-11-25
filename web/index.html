@@ -19,7 +19,8 @@
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; white-space: nowrap; }
   .brand i { width: 30px; height: 30px; border-radius: 9px; background: linear-gradient(135deg, #6366f1, #4338ca); display: grid; place-items: center; color: #fff; font-style: normal; font-size: 15px; }
   nav { display: flex; gap: 2px; background: var(--soft); border: 1px solid var(--line); padding: 3px; border-radius: 11px; }
-  nav button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; color: var(--muted); cursor: pointer; font-weight: 600; }
+  nav { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  nav button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; color: var(--muted); cursor: pointer; font-weight: 600; white-space: nowrap; flex: none; }
   nav button.active { background: var(--surface); color: var(--accent); box-shadow: var(--shadow); }
   .pill { margin-left: auto; padding: 5px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; background: #e2e8f0; color: var(--muted); white-space: nowrap; }
   .pill.live { background: var(--ok-soft); color: var(--ok); }
@@ -109,6 +110,34 @@
   .p-body { padding: 18px 20px 30px; }
   .kv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; flex: 1; }
   .kv div { background: var(--soft); border-radius: 10px; padding: 9px 10px; } .kv b { display: block; font-size: 17px; }
+  /* architecture page */
+  .arch-hero { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+  .arch-hero h1 { font-size: 24px; margin: 0 0 4px; }
+  .flow { display: flex; align-items: stretch; gap: 0; overflow-x: auto; padding: 6px 2px 10px; }
+  .node { flex: 1 1 0; min-width: 132px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px;
+          box-shadow: var(--shadow); position: relative; }
+  .node .k { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+  .node b { display: block; font-size: 14px; margin: 3px 0 4px; }
+  .node p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .node.cam { border-top: 3px solid #0ea5e9; } .node.ai { border-top: 3px solid var(--accent); } .node.out { border-top: 3px solid var(--ok); }
+  .arrow { flex: 0 0 26px; display: grid; place-items: center; color: #94a3b8; font-size: 18px; }
+  .loop { margin: 4px 0 0; padding: 12px 14px; border: 2px dashed #c7d2fe; border-radius: 12px; background: var(--accent-soft);
+          display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .loop b { color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 12px; padding: 4px 10px; border-radius: 99px; background: var(--soft); border: 1px solid var(--line); font-weight: 600; }
+  .outs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
+  .metric b { display: block; font-size: 26px; line-height: 1.1; color: var(--accent); }
+  .metric span { font-size: 12px; color: var(--muted); }
+  .privacy { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .privacy ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .states { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+  .states span.s { padding: 3px 9px; border-radius: 7px; background: #fff; border: 1px solid #c7d2fe; font-weight: 700; color: var(--accent); }
+  @media (max-width: 1000px) {
+    .flow { flex-direction: column; } .arrow { transform: rotate(90deg); height: 22px; }
+    .outs, .privacy { grid-template-columns: 1fr 1fr; }
+  }
   @media (max-width: 1000px) {
     .live-grid, .sess-grid, .two, .proof { grid-template-columns: 1fr; }
     header { flex-wrap: wrap; gap: 10px; padding: 10px 14px; } main { padding: 14px; }
@@ -123,6 +152,7 @@
     <button data-tab="records">Sessions</button>
     <button data-tab="students">Students</button>
     <button data-tab="settings">Settings</button>
+    <button data-tab="arch">How it works</button>
   </nav>
   <span id="pill" class="pill">Stopped</span>
 </header>
@@ -176,6 +206,7 @@
         <label class="check"><input id="autoZoom" type="checkbox"> Auto-zoom (AI)</label>
         <span id="phoneMsg" class="muted small" style="flex-basis:100%"></span>
       </div>
+      <div id="nextSess" class="muted small" style="margin-top:10px;display:none"></div>
       <div id="err" class="err"></div>
     </div>
     <div class="live-grid">
@@ -303,6 +334,79 @@
         <p class="muted small" id="tgStatus" style="margin:10px 0 0"></p>
         <p class="muted small" style="margin:6px 0 0">Student portal on this Wi-Fi: <b id="portalUrl"></b><br>
           Students send <code>/link &lt;Login ID&gt; &lt;PIN&gt;</code> to the bot once.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ ARCHITECTURE -->
+  <section id="arch" class="tab">
+    <div class="card arch-hero">
+      <div>
+        <h1>Long-Range Face Attendance</h1>
+        <div class="muted">One CCTV or phone camera marks the whole classroom from a distance - no queues, no ID cards, no roll call.</div>
+      </div>
+      <div class="chips">
+        <span class="chip">Python</span><span class="chip">InsightFace SCRFD + ArcFace</span><span class="chip">ONNX Runtime (CPU)</span>
+        <span class="chip">OpenCV</span><span class="chip">Flask</span><span class="chip">SQLite</span><span class="chip">Telegram Bot API</span><span class="chip">ONVIF / IP Webcam</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Pipeline - every frame, on the classroom laptop</h3>
+      <div class="flow">
+        <div class="node cam"><span class="k">1 · Camera</span><b>CCTV / phone</b><p>RTSP (H.264) or MJPEG stream, 1080p. Auto-reconnect if Wi-Fi drops.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node cam"><span class="k">2 · Frame reader</span><b>Latest frame only</b><p>Background thread drops old frames, so a slow CPU never lags behind.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">3 · Detection</span><b>SCRFD + tiled scan</b><p>Whole frame + overlapping full-resolution tiles find tiny faces at the back.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">4 · Tracking</span><b>Stable IDs</b><p>Velocity prediction; crowded or re-found faces are re-identified - no name swaps.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">5 · Recognition</span><b>ArcFace 512-d</b><p>Cosine match against each student's averaged embedding + a margin over the 2nd best.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node ai"><span class="k">6 · Voting</span><b>k-of-n frames</b><p>3 strong or 5 normal matches within 30 s. One bad frame can't mark anyone.</p></div>
+        <div class="arrow">➜</div>
+        <div class="node out"><span class="k">7 · Attendance</span><b>Mark + proof</b><p>Once per session (DB constraint). Face crop + full frame saved as proof; late flagged.</p></div>
+      </div>
+      <div class="loop">
+        <div><b>⟲ Auto-zoom controller</b> <span class="muted small">(phone digital zoom or PTZ CCTV over ONVIF)</span><br>
+          <span class="small muted">Zooms onto faces too small to recognise, holds still while a face is being scanned, sweeps the room for missing students, then settles to idle.</span></div>
+        <div class="states"><span class="s">SEARCHING</span>→<span class="s">TARGET_LOCKED</span>→<span class="s">STABILIZING</span>→<span class="s">RECOGNIZING</span>→<span class="s">ATTENDANCE_RECORDED</span>→<span class="s">COOLDOWN</span>→<span class="s">IDLE</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Where the results go</h3>
+      <div class="outs">
+        <div class="node out"><span class="k">Database</span><b>SQLite on the laptop</b><p>Sessions, attendance, students (hashed PINs), notifications, zoom log, audit log.</p></div>
+        <div class="node out"><span class="k">Teacher app</span><b>127.0.0.1:5000</b><p>Live view, sessions &amp; schedules, manual / bulk marking, student profiles, CSV.</p></div>
+        <div class="node out"><span class="k">Students</span><b>Portal + Telegram</b><p>Login ID + PIN portal on the Wi-Fi; Telegram message the moment they're marked.</p></div>
+        <div class="node out"><span class="k">Online</span><b>Dashboard (Render)</b><p>Laptop pushes records every 5 s over HTTPS with a token - read-only copy online.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Measured results <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">- from the project's automated tests</span></h3>
+      <div class="outs">
+        <div class="metric"><b>0</b><span>wrong names in every test (blur, dark, crowds, strangers, people crossing)</span></div>
+        <div class="metric"><b>2% → 87%</b><span>faces ~28 px wide (≈8 m on a phone) recognised per frame, before → after the tiled scan</span></div>
+        <div class="metric"><b>0/6 → 6/6</b><span>far-away students marked without → with auto-zoom (simulated 4K classroom)</span></div>
+        <div class="metric"><b>~5 FPS</b><span>on an i5 laptop CPU, no GPU · memory stable over a 3-min run</span></div>
+        <div class="metric"><b>100%</b><span>leave-one-out accuracy on 143 enrolment photos of 9 students</span></div>
+        <div class="metric"><b>207</b><span>automated checks across 7 test suites, all passing</span></div>
+        <div class="metric"><b>&lt; 1 min</b><span>to enrol a new student: photos → 512-d embedding, no training</span></div>
+        <div class="metric"><b>5 s</b><span>from a mark on the laptop to the online dashboard</span></div>
+      </div>
+      <p class="muted small" style="margin:10px 0 0">Distance and auto-zoom figures come from synthetic tests on enrolment photos; real-classroom testing is ongoing.</p>
+    </div>
+
+    <div class="card">
+      <h3>Privacy &amp; security</h3>
+      <div class="privacy">
+        <div><b>Stays on the laptop</b>
+          <ul><li>Face photos, proof images and face embeddings</li><li>The full database and the Telegram token</li></ul></div>
+        <div><b>Goes online</b>
+          <ul><li>Names, login IDs, hashed PINs, attendance rows - nothing else</li><li>Teacher login, rate-limited PIN login, students see only their own data</li></ul></div>
       </div>
     </div>
   </section>
@@ -500,7 +604,9 @@ function showErr(m) { $("err").textContent = m; $("err").style.display = m ? "bl
 let viewSession = null, wasRunning = false, lastStatus = null;
 async function refresh() {
   let s;
-  try { s = await api("/api/status" + (viewSession ? "?session=" + encodeURIComponent(viewSession) : "")); }
+  // camera running: its session. Camera off: the session typed in the box (so lists + manual marks match it)
+  const q = lastStatus && lastStatus.running ? viewSession : ($("session").value.trim() || viewSession);
+  try { s = await api("/api/status" + (q ? "?session=" + encodeURIComponent(q) : "")); }
   catch { return; }
   lastStatus = s;
   if (s.running) viewSession = s.session;
@@ -528,11 +634,17 @@ async function refresh() {
   if (az) $("phoneMsg").textContent = s.autozoom_error || s.autozoom;
   const setHTML = (el, html) => { if (el._html !== html) { el._html = html; el.innerHTML = html; } };
   setHTML($("presentList"), s.present.map(presentRow).join("") || '<span class="muted small">Nobody yet</span>');
+  const sessNow = s.session || $("session").value.trim();     // camera off: mark into the typed session
   setHTML($("absentList"), s.absent.map((n) => `
     <div class="row" data-student="${esc(n)}"><img class="av" src="${photo(n)}" alt="">
       <div class="grow"><span class="name-link">${esc(n)}</span></div>
-      ${s.session ? `<button class="btn small" onclick='manual(${J(s.session)}, ${J(n)}, "add")'>Mark present</button>` : ""}
+      ${sessNow ? `<button class="btn small" onclick='manual(${J(sessNow)}, ${J(n)}, "add")'>Mark present</button>` : ""}
     </div>`).join("") || '<span class="muted small">Everyone is present</span>');
+  const next = sessions.filter((x) => x.status === "scheduled" && x.end_at && x.end_at > localDT(new Date()))
+                       .sort((a, b) => a.start_at.localeCompare(b.start_at))[0];
+  $("nextSess").style.display = next && !s.running ? "" : "none";
+  if (next && !s.running) setHTML($("nextSess"), `${inWindow(next) ? "Happening now" : "Next session"}: <b>${esc(next.name)}</b> · ${esc(nice(next.start_at.replace("T", " ")))}`
+    + `${next.auto_start ? " · starts automatically" : ""} <button class="btn small" onclick='$("session").value=${J(next.name)};refresh()'>Use this session</button>`);
   setHTML($("log"), s.events.map((e) => `<div>${esc(e.time)} · ${esc(e.text)}</div>`).join("") || "No activity yet.");
 }
 function presentRow(r) {
