@@ -637,6 +637,32 @@ def api_delete():
     return jsonify(ok=True, records=n, photos=removed)
 
 
+@app.post("/api/demo/reset")
+def api_demo_reset():
+    """Start a demo from a clean slate: removes ALL captured data (attendance, sessions,
+    proof photos, Telegram delivery log, zoom log). Keeps students, their photos,
+    face enrolment, login IDs, PINs and Telegram links."""
+    if engine.running:
+        return jsonify(ok=False, error="Stop the camera first."), 400
+    with contextlib.closing(db()) as con:
+        files = [f for r in con.execute("SELECT snapshot, frame_snapshot FROM attendance") for f in r if f]
+        n = con.execute("DELETE FROM attendance").rowcount
+        s = con.execute("DELETE FROM sessions").rowcount
+        con.execute("DELETE FROM notifications")
+        con.execute("DELETE FROM zoom_events")
+        con.commit()
+        audit(con, "ALL", "-", f"demo reset: {n} records, {s} sessions removed")
+    removed = 0
+    if config.SNAPSHOT_DIR.exists():
+        for p in config.SNAPSHOT_DIR.glob("*.jpg"):          # also proof photos of older runs
+            p.unlink(missing_ok=True)
+            removed += 1
+    engine.events.clear()
+    if cloud is not None:
+        cloud._wake.set()                                    # online copy is cleared too
+    return jsonify(ok=True, records=n, sessions=s, photos=removed)
+
+
 @app.get("/api/zoomlog")
 def api_zoomlog():
     """Every auto-zoom move of a session (when, zoom, where, why, who was recognised)."""

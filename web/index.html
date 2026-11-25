@@ -119,6 +119,7 @@
   .node .k { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
   .node b { display: block; font-size: 14px; margin: 3px 0 4px; }
   .node p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.4; }
+  .node p b { display: inline; font-size: inherit; margin: 0; color: var(--text); }
   .node.cam { border-top: 3px solid #0ea5e9; } .node.ai { border-top: 3px solid var(--accent); } .node.out { border-top: 3px solid var(--ok); }
   .arrow { flex: 0 0 26px; display: grid; place-items: center; color: #94a3b8; font-size: 18px; }
   .loop { margin: 4px 0 0; padding: 12px 14px; border: 2px dashed #c7d2fe; border-radius: 12px; background: var(--accent-soft);
@@ -130,13 +131,19 @@
   .metric { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; box-shadow: var(--shadow); }
   .metric b { display: block; font-size: 26px; line-height: 1.1; color: var(--accent); }
   .metric span { font-size: 12px; color: var(--muted); }
+  .deep { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .deep .node p { font-size: 12.5px; }
+  .timeline { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; position: relative; }
+  .timeline > div { background: var(--soft); border-radius: 12px; padding: 12px; border-left: 3px solid var(--accent); }
+  .timeline b { display: block; color: var(--accent); font-size: 13px; margin-bottom: 4px; }
+  .timeline span { font-size: 12.5px; color: var(--muted); }
   .privacy { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .privacy ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
   .states { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
   .states span.s { padding: 3px 9px; border-radius: 7px; background: #fff; border: 1px solid #c7d2fe; font-weight: 700; color: var(--accent); }
   @media (max-width: 1000px) {
     .flow { flex-direction: column; } .arrow { transform: rotate(90deg); height: 22px; }
-    .outs, .privacy { grid-template-columns: 1fr 1fr; }
+    .outs, .privacy, .deep, .timeline { grid-template-columns: 1fr 1fr; }
   }
   @media (max-width: 1000px) {
     .live-grid, .sess-grid, .two, .proof { grid-template-columns: 1fr; }
@@ -184,6 +191,7 @@
         </label>
         <button id="startBtn" class="btn go">▶ Start attendance</button>
         <button id="stopBtn" class="btn danger" disabled>■ Stop</button>
+        <button id="resetBtn" class="btn ghost-bad" title="Clear all captured attendance to start the demo again">↺ Reset demo</button>
       </div>
       <div id="phoneCtl" class="controls" style="display:none">
         <label style="flex:1;min-width:170px;max-width:300px">Zoom <span id="zoomVal">1.0x</span>
@@ -336,6 +344,14 @@
           Students send <code>/link &lt;Login ID&gt; &lt;PIN&gt;</code> to the bot once.</p>
       </div>
     </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Demo tools</h3>
+      <div class="controls" style="align-items:center">
+        <button id="resetBtn2" class="btn danger">↺ Reset demo data</button>
+        <span class="muted small" style="flex:1;min-width:260px">Deletes all captured data - attendance, sessions, proof photos,
+          Telegram log, zoom log - so the demo starts clean. <b>Kept:</b> students, their photos, face enrolment, login IDs, PINs, Telegram links.</span>
+      </div>
+    </div>
   </section>
 
   <!-- ============================ ARCHITECTURE -->
@@ -372,6 +388,56 @@
         <div><b>⟲ Auto-zoom controller</b> <span class="muted small">(phone digital zoom or PTZ CCTV over ONVIF)</span><br>
           <span class="small muted">Zooms onto faces too small to recognise, holds still while a face is being scanned, sweeps the room for missing students, then settles to idle.</span></div>
         <div class="states"><span class="s">SEARCHING</span>→<span class="s">TARGET_LOCKED</span>→<span class="s">STABILIZING</span>→<span class="s">RECOGNIZING</span>→<span class="s">ATTENDANCE_RECORDED</span>→<span class="s">COOLDOWN</span>→<span class="s">IDLE</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Under the hood</h3>
+      <div class="deep">
+        <div class="node ai"><span class="k">Detection</span><b>SCRFD (buffalo_s)</b>
+          <p>Runs on the whole frame (resized to 640×640) for near faces, plus 8 overlapping 640-px tiles at full 1080p resolution
+          every 2nd frame for far faces. Boxes cut by a tile border are dropped and boxes inside another box are merged, so every
+          face gets exactly one box.</p></div>
+        <div class="node ai"><span class="k">Recognition</span><b>ArcFace → 512 numbers</b>
+          <p>Each face is aligned to 112×112 using 5 landmarks and turned into a 512-d embedding. It is compared with every
+          student's averaged embedding: match if cosine ≥ <b>0.40</b> and at least <b>0.05</b> ahead of the second-best student,
+          otherwise "Unknown". Faces under 24 px are not recognised.</p></div>
+        <div class="node ai"><span class="k">Tracking</span><b>IDs that don't swap</b>
+          <p>Boxes are linked frame to frame by overlap, then by predicted position (constant velocity) for fast movers. A face that
+          re-appears, or sits close to another face, is re-identified immediately; one student name can belong to only one face per frame.</p></div>
+        <div class="node ai"><span class="k">Voting &amp; quality</span><b>Evidence, not one frame</b>
+          <p>Marked after <b>3</b> matches in 30 s if the best match ≥ 0.55, else <b>5</b>. Frames taken while the camera moves give no
+          votes. Faces that fail are labelled Low light / Face not clear / Turned away / Too far instead of guessing.</p></div>
+        <div class="node ai"><span class="k">Auto-zoom</span><b>Target, hold, sweep, idle</b>
+          <p>Zooms (max 3×) onto unmarked faces under 48 px, never moves while a face is being scanned, waits 4 s before treating a face
+          as lost, sweeps the room with growing gaps (30 s → 5 min) and goes idle after 3 empty sweeps.</p></div>
+        <div class="node out"><span class="k">Reliability</span><b>Built to keep running</b>
+          <p>Auto-reconnect when the stream drops, a bad frame is skipped (not fatal), one camera controller (no conflicting moves),
+          failed DB writes leave no half record, cross-site requests are blocked, Telegram retries on network errors.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>What happens when a student walks in <span class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">- example, at ~5 FPS</span></h3>
+      <div class="timeline">
+        <div><b>t = 0 s</b><span>Face found by the detector (tile scan if far away) and given a track ID.</span></div>
+        <div><b>+0.2 s</b><span>Too small? Auto-zoom moves the phone camera onto it and waits for focus.</span></div>
+        <div><b>+0.4 s</b><span>ArcFace embedding → best match "Kanika" (0.74) → vote 1/3, box turns yellow.</span></div>
+        <div><b>+1–2 s</b><span>Votes 2/3 and 3/3 from the next frames; the camera is held still meanwhile.</span></div>
+        <div><b>mark</b><span>Row written once (UNIQUE session + name); face crop + full frame saved as proof; late flag if after start + grace.</span></div>
+        <div><b>+0–5 s</b><span>Telegram message to the student, live lists update, records pushed to the online dashboard.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Database (SQLite, on the laptop)</h3>
+      <div class="deep">
+        <div class="node out"><span class="k">attendance</span><p>session, name, time, match score, face px, votes, Face/Manual, zoom, proof file names - <b>one row per student per session</b>.</p></div>
+        <div class="node out"><span class="k">sessions</span><p>name, course, start/end, camera, auto start/stop, late-after minutes, status (scheduled / live / done).</p></div>
+        <div class="node out"><span class="k">students</span><p>name, login ID, PIN hash + salt (PBKDF2, 120k rounds), Telegram chat ID.</p></div>
+        <div class="node out"><span class="k">notifications · zoom_events · audit_log</span><p>Telegram delivery status, every auto-zoom move, every manual change / delete / demo reset.</p></div>
+        <div class="node cam"><span class="k">embeddings.npz</span><p>One averaged 512-d vector per student (from enrolment photos) - this is the "training".</p></div>
+        <div class="node cam"><span class="k">snapshots/</span><p>Proof photos: face crop + full frame with name, score, votes, time and zoom printed on it.</p></div>
       </div>
     </div>
 
@@ -612,7 +678,7 @@ async function refresh() {
   if (s.running) viewSession = s.session;
   $("pill").textContent = s.running ? "LIVE · " + s.session : "Stopped";
   $("pill").classList.toggle("live", s.running);
-  $("startBtn").disabled = s.running; $("stopBtn").disabled = !s.running;
+  $("startBtn").disabled = s.running; $("stopBtn").disabled = !s.running; $("resetBtn").disabled = s.running;
   $("session").disabled = s.running;
   if (!s.running && wasRunning) {
     $("videoBox").innerHTML = "<span>Camera stopped.</span>";
@@ -817,6 +883,26 @@ $("delSessBtn").onclick = () => deleteRecords({ session: currentRec },
   `Delete the session "${currentRec}" and all its attendance + proof photos?\nThis cannot be undone. (Students and their photos are kept.)`);
 $("delAllBtn").onclick = () => deleteRecords({ all: true },
   "Delete EVERY attendance record of EVERY session, with all proof photos?\nThis cannot be undone. (Students and their photos are kept.)");
+
+// ---------------- demo reset
+async function resetDemo() {
+  if (lastStatus && lastStatus.running) return window.alert("Stop the camera first.");
+  if (!window.confirm("Reset demo data?\n\nDeletes ALL attendance, sessions, proof photos, Telegram log and zoom log.\n"
+      + "Students, photos, enrolment, login IDs and PINs are kept.")) return;
+  try {
+    const r = await post("/api/demo/reset", {});
+    window.alert(`Clean slate: removed ${r.records} attendance records, ${r.sessions} sessions and ${r.photos} proof photos.`);
+    currentRec = null; viewSession = null;
+    $("session").value = today + " Lecture";
+    $("recTitle").textContent = "Select a session"; $("recSub").textContent = "";
+    ["csvBtn", "delSessBtn", "sessStartBtn", "sessStopBtn", "sessEditBtn"].forEach((i) => $(i).style.display = "none");
+    $("detailBody").style.display = ""; $("detailTable").style.display = "none";
+    $("videoBox").innerHTML = "<span>Camera is off.<br>Choose a camera and press <b>Start attendance</b>.</span>";
+    showErr(""); await loadSessions(); refresh();
+  } catch (e) { window.alert("Could not reset: " + e.message); }
+}
+$("resetBtn").onclick = resetDemo;
+$("resetBtn2").onclick = resetDemo;
 
 // ---------------- student profile
 async function openProfile(name) {
